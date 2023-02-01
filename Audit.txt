@@ -1,0 +1,29 @@
+>show parameter audit
+>sys.audits, audit_train table can find the audit logs
+Audit types:
+1) statement auditing - audit all the ddl statement for the perticular user
+2) privilege audit - audit for privileges related
+3) object auditing - we can grant object level or DML also will audit
+4) Fine grained auditing 
+
+Audit tables:
+-------------
+dba_stmt_audit_options -> statement level audit
+dba_priv_audit_options -> privilege level audit
+dba_obj_audit_options -> object level
+
+select username,timestamp,action_name from dba_audit_trail where username='prakash';
+-----
+statement level audit:
+----------------------
+>select name from dba_users;  -- see all the user
+> audit table by whshied;     -- enable audit
+>select user_name,audit_option,success,failure from dba_stmt_audit_opts order by user_name;
+>dba_audit_trail  --table will see all the user audit
+
+Privilege level audit:
+----------------------
+>audit create any table by wyshied; or audit insert on scott.newtab;
+>dba_priv_audit_options   -- see the audit in the table
+
+
