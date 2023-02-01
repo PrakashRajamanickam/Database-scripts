@@ -1,0 +1,4 @@
+Stages:
+1) Instance creation and startup
+2) Database creation
+3)Data dictionary creation

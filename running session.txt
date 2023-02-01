@@ -1,0 +1,2 @@
+select * from v$session where username not in ('SYS','SYSTEM','DBSNMP') order by SECONDS_IN_WAIT desc ;
+select count(*) from v$session where username not in ('SYS','SYSTEM','DBSNMP') order by SECONDS_IN_WAIT desc ;

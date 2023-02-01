@@ -1,0 +1,47 @@
+1)Taking the backup of the source database
+2)copy the backup pieces to the target server
+3)Start an auxilary instance on the target
+4)create the controlfile
+5)Restore the database from backup
+6)Open the database using restlogs
+ > login db
+> archive log list
+>exit
+>rman
+>connect target /
+rman>backup database plus archivelog;
+rman> backup current controlfile;    -- take backup controlfile
+> mkdir -p /home/app/flash_recovery_area/PRIMDB/backupset/  -- copy the backup
+location from primary and create the directory in standby
+>scp  --copy the backup file primary to standby server
+>sql>create pfile='/temp/initclonedb.ora' from spfile;   -- create spfile in source
+>scp --`the pfile to standby in dbs path
+> ls -alrt  -- login standby oracle_home\dbs path
+>vi initclonedb.ora
+>1,$ s#primedb#clonedb$s   -- replace the dbname primedb to clonedb both db and logfile
+>db_file_name_convert  'primedb' 'clonedb'  
+>log_file_name_convert 'primedb' 'clonedb'
+> mkdir -p '/home/oracle/app/oracle/clonedb/adump'  -- create adump directory
+>mkdir -p /wysheid/clonedb/
+>mkdir /home/oracle/app/oracle/flash_recovery_area/clonedb
+>vi etc/oratab
+>add entry for clonedb
+>login to clonedb as sysdba
+sql>startup nomount
+--check primary tns entry and login sysdba
+> cd /home/oracle/app/oracle/product/11.2.0/dbhome_1/network/admin/
+>vi tnsname.ora
+---- standby
+>sqlplus system/oracle@primtns
+>rman
+rman>connect auxiliary /   --connect auxilarydb
+rman>connect target sys/oracle@primtns  --connected auxilary and prime db both
+rman>run
+{
+allocate auxiliary chennel cl device type disk;
+allocate channel c2 device type disk;
+duplicate target database to 'clonedb';
+}
+
+
+

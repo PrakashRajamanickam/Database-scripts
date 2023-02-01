@@ -1,0 +1,20 @@
+create user prakash identified by prakash;
+grant create to prakash;
+alter user prakash quota 10m on users;
+grant create table to prakash;
+
+create role and grant privileges
+---------------------------------
+create role MANAGER_ROLE;
+GRANT INSERT,UPDATE,DELETE ON PRAKASH.SALES_HISTORY TO MANAGER_ROLE;
+GRANT CREATE TABLE TO MANAGER_ROLE;
+GRANT MANAGER_ROLE TO PETER;
+
+CREATE ROLE OPERATIONS_ROLE;
+GRANT INSERT, UPDATE ON PRAKSH.SALES TO OPERATONS_ROLE;
+GRANT OPERATIONS_ROLE TO MANAGER_ROLE;
+GRANT OPERATIONS_ROLE TO JOHN;
+
+connect to user
+---------------
+conn user/password

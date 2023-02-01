@@ -1,0 +1,637 @@
+https://oracle-base.com/dba/scripts
+http://shahiddba.blogspot.com/2012/04/oracle-dba-daily-checklist.html
+cd /opt/oracle/local/EIS
+
+dzdo /bin/su - oracle
+Kill session:
+ps -ef |grep <sqlid/serial#>
+ps -ef | grep ksh  ---check internal script
+kill -9 <id>
+echo $ORACLE_SID
+set pages 200;
+set lines 200;
+col OWNER for a10
+set long 9999;
+expdp help=y
+set echo on
+set time on 
+set timin on
+cat>1.sql
+------------
+cat /etc/oratab
+export ORACLE_SID=<dbname>
+export ORACLE_HOME=<Homepath>
+---------------
+mkdir -p /opt/oracle/software - create directory
+uname -a -check linux 32 or 64 bit
+:wq! -to save file
+:q! - exit
+i -insert, d-delete,dw -delete sentance
+crs_stat -t
+---------------
+ps -ef |grep asm /pmon /tns
+. oraenv
++ASM
+sqlplus /as sysasm
+----
+ps -ef |grep agent
+path/inst_name/asm
+emctl stop agent
+--------------
+ sqlplus sys@<servicename> as sysdba
+ crsstat | grep -i db | grep -v OFFLINE
+
+Check whether this DB has DB Link in OEM database:
+select * from DBA_DB_LINKS where DB_LINK='<dbname>.DFS.US';
+
+----------------------
+$ export ORACLE_HOME=/location/of/oracle/installed/products
+$ export ORACLE_SID="your database service name"
+
+step 1: first need to find the stand by server
+
+SYS> show parameter fal
+
+step 2 :login to the stand by and primary check for sync status 
+
+Run the first script on both servers(sync)
+select /*+rule */ 'DGSYNCH' as column_title, p.thread#,max(p.sequence#) primary_current,max(s.sequence#) secondary_current_log,max(p.sequence#)-max(s.sequence#) diff_count from v$log p, V$archived_log s where s.applied='YES' and p.thread#=s.thread# group by p.thread#;
+
+step 3: Check for Disk space in both 
+
+Run the last script.
+SELECT GROUP_NUMBER,NAME,TOTAL_MB/1024,FREE_MB/1024,USABLE_FILE_MB/1024 FROM V$ASM_DISKGROUP;
+
+
+Step 4: Check the tablespace and the datafile to add the space.
+Run the second script.
+
+set linesize 300
+col FILE_NAME format a70
+col tablespace_name format a18
+select tablespace_name, FILE_NAME, MAXBYTES/1024/1024/1024, BYTES/1024/1024/1024, AUTOEXTENSIBLE from dba_data_files where tablespace_name='SYSTEM';
+
+select sum(bytes/1024/1024/1024) from dba_free_space where tablespace_name='tbname';
+
+select tablespace_name,file_name,bytes/1024/1024/1024 from dba_data_files where tablespace_name='<tblname>';
+
+
+Step 6: Get the path and run the below command
+
+alter database datafile '<datafilename>' resize 30g;
+
+alter tablespace <tblname> add datafile '+DATA' size 31g;
+
+alter tablespace users add datafile '+DATA' size 10M autoextend on next 1M maxsize 5G;
+
+alter database datafile '<filename.dbf>' autoextend on next 1m maxsize 6500m;
+
+alter tablespace TEMP add TEMPFILE '+DATA' size 20g;
+
+Big tablespace:
+--------------
+alter tablespace <tblname> resize 450G;
+
+asm disk group
+--------------
+select GROUP_NUMBER, NAME,TOTAL_MB, FREE_MB, USABLE_FILE_MB, (100*(total_mb-free_mb)/total_mb) pct_used from V$ASM_DISKGROUP;
+
+SELECT tablespace_name, file_name, bytes FROM dba_temp_files WHERE tablespace_name = 'TEMP';
+select sum(bytes / (1024*1024*1024 )) "DB Size in MB" from dba_data_files;
+==
+select a.tbl "Name",
+a.tsz "Total Size",
+b.fsz "Free Space",
+round((1-(b.fsz/a.tsz))*100) "Pct Used",
+round((b.fsz/a.tsz)*100) "Pct Free" 
+from 
+(select tablespace_name tbl,
+sum(bytes)/1024/1024/1024 TSZ 
+from dba_data_files
+where tablespace_name ='<tblname>' 
+group by tablespace_name) a,
+(select tablespace_name tblsp,
+sum(bytes)/1024/1024/1024 FSZ 
+from dba_free_space
+where tablespace_name ='<tblname>' group by tablespace_name) b
+Where a.tbl=b.tblsp;
+--------------------------------------------------------------------------
+Archive Log backup:
+
+select * from v$recovery_area_usage;
+select dest_name, status, destination from v$archive_dest;
+>archive log list
+/opt/oracle/admin/cipse013223/
+>df -g /opt/oracle/admin/cipse01/
+select GROUP_NUMBER, NAME,TOTAL_MB, FREE_MB, USABLE_FILE_MB, (100*(total_mb-free_mb)/total_mb) pct_used from V$ASM_DISKGROUP;
+select name, total_mb, free_mb,USABLE_FILE_MB from  v$asm_diskgroup;
+select PROCESS,SEQUENCE#,STATUS from  v$managed_standby;
+sho parameter db_name
+connect target 
+list expired archivelog all; 
+delete archivelog until time 'SYSDATE-10';
+crosscheck archivelog all;
+delete noprompt archivelog all;
+export ORACLE_SID=+ASM
+<hostname>:+ASM:/opt/oracle$ export ORACLE_HOME=/opt/oragrid/product/11_2_0/grid
+<hostname>:+ASM:/opt/oracle$ asmcmd
+ASMCMD> lsdg
+ASMCMD> cd ARCH/
+ASMCMD> ls
+ASMCMD> cd <dbname>/
+ALTER SYSTEM SWITCH LOGFILE and ALTER SYSTEM ARCHIVE LOG CURRENT.
+--------------------------------
+Archive backup without script
+rman
+connect target sys@dbname
+PWD:***************
+
+rman target sys/'<dbname>'@dbname
+
+run
+{
+BACKUP AS COMPRESSED BACKUPSET ARCHIVELOG ALL NOT BACKED UP FILESPERSET 10 DELETE ALL INPUT TAG 'ARCH';
+DELETE NOPROMPT FORCE EXPIRED BACKUP;
+DELETE NOPROMPT OBSOLETE;
+}
+
+Level0 backup:
+------------
+RUN
+{
+BACKUP AS COMPRESSED BACKUPSET INCREMENTAL LEVEL 0 DATABASE INCLUDE CURRENT CONTROLFILE FILESPERSET 4 TAG 'LEVEL0';
+DELETE NOPROMPT FORCE EXPIRED BACKUP;
+DELETE NOPROMPT OBSOLETE;
+}
+
+
+CONFIGURE DEVICE TYPE DISK BACKUP TYPE TO COMPRESSED BACKUPSET PARALLELISM 4;
+
+---------------------------------------------
+Mount point -Background area used
+df -h
+du -sh .
+du -sh *
+ls -lrt
+du -ksh *
+df -Ph /
+df -g .
+du -sg *
+du -sm *
+select value  from v$parameter where name = 'audit_file_dest';
+Filesystem -/oradata/oratmp03,/opt/oraoem -House keeping is not possible
+The most used options for df are -k that show the output values in Kilobytes (this is usually teh default), -h that print sizes in human readable format (e.g., 1K 234M 2G) and -i that give information about inodes
+
+find /u01/app/oracle/product/11.2.0.4/dbhome_1/rdbms/audit  -name "*ora*.aud" -type f -mtime +2 -exec rm {} \;
+
+| while read AUDFILE
+
+find /usr/local/oracle/log/Use	rTrace/*.trc -type f -mtime +7 -exec rm {} \; 
+
+find . -name "*.xml*" -mtime +5 -exec rm {} + 
+
+find -name '*.aud' -mtime +20 -exec rm -f {} \;
+du -sh * | egrep 'M' | sort -rn | head -10
+ 
+du -sh * | egrep 'G' | sort -rn | head -10 
+
+
+You can cleanup the old  .trm, .trc, .xml files by leaving the recent 1 week files/traces.
+
+Ex:
+
+find /u01/app/grid/diag/tnslsnr/rwep22x01m/listener/alert/*.xml -mtime +3 -exec rm -f {} \;
+
+We have grid access as well and you can get the grid password in PPM as below
+
+
+find . -name "*.xml*" -mtime +2 -exec rm {} +
+To Remove trace files:
+/u01/app/oracle/diag/rdbms/d10cr180/d10cr1802/trace
+find . -name '*.trm'| xargs rm
+find . -name '*.trc'| xargs rm
+find /u01/app/oracle/diag/rdbms/<dbname>/votiexps301/trace/*.trc -mtime +5 -exec ls 
+
+find /u01/app/oracle/diag/rdbms/<dbname>/<node1>/trace/*.trm -mtime +10 -exec rm {} \;
+
+grid@<hostname> ~]$ cd /u01/app/grid/crsdata/@global/cvu/baseline/cvures
+
+[grid@ cvures]$ rm cvucheckrepor*xml
+(oracle@) /u01/app/grid/diag/crs/<hostname>/crs/trace > rm -rf c*
+(oracle@) /u01/app/grid/diag/crs/<hostname>/crs/trace > rm -rf o*
+(oracle@) /u01/app/grid/diag/crs/<hostname>/crs/trace > rm -rf g*
+-----
+show parameter dump;
+show parameter audit;
+>history
+(oracle@hostname) /opt/oradb/diag/tnslsnr/hostname/listener/trace > 
+cat /dev/null > listener.log
+--
+rid@hostname) /u01/app/grid/diag/tnslsnr/<hostname>/listener_scan3/trace > tail -10000 listener.log >listener_04292016.log
+(grid@hostname) /u01/app/grid/diag/tnslsnr/Hostname/listener_scan3/trace > ls -ltr
+
+(grid@hostname) /u01/app/grid/diag/tnslsnr/hostname/listener_scan3/trace > >listener_scan3.log
+
+--------------------------------------------------------
+Agent status check
+------------------
+>. setagentenv
+. ./setagentenv
+>emctl status agent
+>EMCTL STOP AGENT
+>EMCTL START AGENT
+
+ps -ef |grep agent
+path /bin
+ >./emctl status agent
+
+Database status check:
+----------------------
+>srvctl status database -d <dbname>
+>srvctl start database -d <dbname>
+srvctl status service -d dgen10 -s <servicename>
+sql> startup force;
+SHUTDOWN NORMAL
+SHUTDOWN IMMEDIATE
+SHUTDOWN ABORT
+SHUTDOWN TRANSACTIONAL
+STARTUP MOUNT;
+----------------------
+check process and session:
+select a.username, a.program, a.module, a.logon_time,b.spid PID from v$session a, v$process b where a.username = 'SYS'  and 	a.paddr=b.addr and a.program like '%rman%';
+------------------------------------------------------------
+Table unlock
+exec dbms_stats.unlock_table_stats('CAPP', 'XCHG_ACCT_RECM_GRP_FDBCK_LOOP');
+exec dbms_stats.unlock_schema_stats('CAPP');
+
+db_segments -what are the schema in db
+db_table -what are the tables in db
+
+Index disable:
+oradba@dbname>alter index tbaadm.IDX_CMS_CARD_ACCT_LINK_TABLE unusable;
+----------------------------------
+
+Privilege to all user/tables:
+-------------------------
+SELECT 'GRANT SELECT ON DFSCUST.'||TABLE_NAME||' TO TDM_DM10_READ;' FROM ALL_TABLES where OWNER='DFSCUST';
+select 'grant select,insert,update,delete  on '||owner||'.'||object_name||' to COREBANK_SUPT;' from all_objects 
+where owner in('SSOADM')
+
+To get DDL package details:
+--------------------------
+select dbms_metadata.get_ddl('PACKAGE','WKLY_LAMTRG_CLRNG_PACK','DFSCUST') ddl from dual;
+and object_type in ('TABLE','VIEW','SYNONYM');
+
+Export database:
+----------------
+select * from DBA_DIRECTORIES;
+nohup expdp /@dbname directory=OTIS_EXP dumpfile=<dbname>_01SEP2016_%U.dmp logfile=<dbname>_01SEP2016.log full=yes compression=all flashback_time=systimestamp parallel=8 cluster=N &
+
+SQL> show parameter stream
+
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+streams_pool_size                    big integer 0
+
+SQL> 
+SQL> alter system set streams_pool_size=64M scope=memory sid='dbname';
+
+Schema level:
+
+nohup expdp /@dbname SCHEMAS=DFS_DFS_REPOSITORY_DB DIRECTORY=EXP_RW DUMPFILE=DFS_DFS_REPOSITORY_DB.dmp LOGFILE=DFS_DFS_REPOSITORY_DB_exp.log content=all &
+
+nohup expdp \"/ as sysdba\"  directory=OTIS_EXP dumpfile=uotis25_20JUN2016_%U.dmp logfile=uotis25_20JUN2016.log full=yes compression=all flashback_time=systimestamp parallel=8 cluster=N &
+---
+expdp \"sys/<sys_password>@p_ccs as sysdba\" schemas=CAPP dumpfile=CAPP_data.dmp directory=EXP_DIR_SUB 
+nohup expdp \"/ as sysdba\" directory=OTIS_EXP dumpfile=<dbname>_22MAY2016_%U.dmp logfile=<dbname>_22MAY2016.log parallel=8 compression=all full=y &
+
+Table level Export:
+
+expdp \"/ as sysdba\" schemas=CAPS dumpfile=<dbname>_caps_21062016.dmp logfile=qvst0652_caps_21062016.log cluster=no content=all directory=EXP_DI
+R parallel=8
+expdp \"/ as sysdba\" attach=
+reuse_dumpfiles=yes
+
+Check export backup status:
+---------------------------
+SELECT owner_name, job_name, operation, job_mode, state FROM dba_datapump_jobs;
+> expdp attach=SYS_EXPORT_FULL_05
+> expdp system ATTACH=EXP_FULL
+expdp system full=y JOB_NAME=EXP_FULL    --to change job name
+Export> status
+Export> KILL_JOB
+Export> STOP_JOB=IMMEDIATE
+Export> START_JOB[=SKIP_CURRENT]
+Export> CONTINUE_CLIENT
+----------------------------
+check column level constraints
+SELECT OWNER,CONSTRAINT_NAME,COLUMN_NAME,TABLE_NAME FROM dba_cons_columns WHERE TABLE_NAME='USR_LOGN' AND COLUMN_NAME='PRVD_UID';
+
+Import database:
+nohup impdp \"/ as sysdba\" schemas=RESPNWK  directory=EXP_DIR dumpfile=expdp_<dbname>_%u.dmp  logfile=imp_schema_20160614.log TABLE_EXISTS_ACTION=TRUNCATE parallel=8 &
+
+impdp schemas=RESPNWK dumpfile=expdp_<dbname>_%u logfile=imp_schema_20160614.log directory=EXP_DIR TABLE_EXISTS_ACTION=TRUNCATE
+
+nohup impdp \' / as sysdba\' directory=EXP_DIR dumpfile=<dbname>_caps_210616.dmp logfile=<dbname>_caps_210616_imp remap_schema=CAPS:DRCAP content=metadata_only  table_exists_action=replace/append/truncate &
+
+impdp \"/as sysdba \" directory=IMP_CAPS dumpfile=expdp_caps_4tables.dmp logfile=impdp_caps_4tables_19072016.log remap_schema=CAPS:CAPS2 remap_table=CAPS.HNCBLOB:HNCBLOB table_exists_action=replace cluster=N parallel=8
+
+@?/rdbms/admin/utlrp.sql
+
+select object_type,count(*),status from dba_objects where owner='RESPNWK' group by object_type,status;
+select owner, count(object_type) "count", object_type from ALL_OBJECTS where owner in ('DRCAP') group by owner, object_type order by object_type ;
+
+
+ADDM Report
+-----------
+@$ORACLE_HOME/rdbms/admin/addmrpt.sql
+
+copy file another location:
+--------------------------
+scp <filename> oracle@<hostname>:/rw-proj-dat-sub
+$ scp your_username@remotehost.edu:foobar.txt /some/local/directory
+cp /home/stacy/images/image*.jpg /home/stacy/archive
+scp rewards_061416* <Hostname>:/ilab-proj1exp-exports
+scp oracle@<hostname>:/rw-proj1oda-backup1/FULL_<dbname>_EXPORT*.dmp /rw-proj12-exports/
+
+uuencode syslogins_out.dmp syslogins_out.dmp | mailx -s "sql Report" prakr@nets.eu
+
+File or folder permisssion:
+---------------------------
+chmod 777 <filename>.dmp
+SELECT * from DBA_SYS_PRIVS;
+select * from DBA_ROLE_PRIVS;  
+select OWNER,TABLE_NAME,TABLESPACE_NAME,STATUS from dba_tables where table_name like '%VW_RWRD_ADJ_EVNT_QUAL_EVNT%' 
+select GRANTEE,OWNER,TABLE_NAME,PRIVILEGE from dba_tab_privs where grantee='CDST_WSPH' and table_name like 'FIN_AGRMNT_LNK%';
+select * from dba_sys_privs where grantee='USER';
+grant drop PUBLIC SYNONYM TO 'USER;
+
+SYNONYM CREATION:
+------------------
+
+SELECT * FROM  DBA_SYNONYMS WHERE TABLE_NAME='<tblname>' AND OWNER='<name>';
+
+CREATE SYNONYM <username>.<synonymname> FOR <owner>.<tablename>;
+
+select 'grant select on MIGADM.' ||TABLE_NAME ||' to BUS_READ;' from dba_tables where owner='MIGADM';
+
+GRANT SELECT ON AISS.MRCH_TOK_REF TO AISS_WSPH;
+
+Privileges in table:
+-------------------
+grant select on gv_$session_longops to erwd_ro, erwd_supt, eoffr_ro, eoffr_supt;
+
+ASM Status 
+----------
+.setoraenv, +ASM
+srvctl status asm
+
+Password changed date:
+----------------------
+SELECT name,ctime,ptime FROM sys.user$ WHERE name = 'FRDI_DDER';
+select * from dba_profiles where PROFILE='ORA_SCHEMAID_PROFILE';
+alter profile ORA_SCHEMAID_PROFILE LIMIT PASSWORD_REUSE_MAX 12;
+alter profile ORA_SCHEMAID_PROFILE LIMIT PASSWORD_REUSE_MAX UNLIMITED;
+
+Alter user VGUPTA6 identified by <newpassword> password expire
+
+Add TNSname:
+-------------
+cd $ORACLE_HOME/network/admin/tnsnames.ora
+ show parameter service
+
+Schema size
+-------------
+SELECT tablespace_name,Sum(bytes)/1024/1024 AS total_size_mb FROM dba_segments WHERE owner ='ESGN' group by tablespace_name;
+
+Kill Session:
+--------------
+alter system kill session '7122,262189' immediate; 7122 262189 
+
+ora-12514 error
+---------------
+system/p@ssword
+alter system set LOCAL_LISTENER='(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))' scope=both;
+alter system register
+
+synonym script:
+--------------
+select dbms_metadata.get_ddl('SYNONYM','RWRD_PROC_DT','RWRDDVLP') from dual;
+
+Table count
+-----------
+select owner,count(object_type) "count", object_type from ALL_OBJECTS where owner in ('BLC2') group by owner, object_type order by object_type ; 
+
+Privilege all tables:
+---------------------
+
+select name from v$fixed_table where name like 'V$SQL_%';
+select owner ||'.'|| table_name from dba_tables where owner='EEDR';
+=CONCATENATE("grant select on ",A1,"  to ESQM_QEO_SUPT;")
+
+Create trigger Privileges:
+--------------------------
+grant create session, create any trigger to EEVNT;
+
+IP address:
+SELECT UTL_INADDR.get_host_address from dual;
+
+User lock Details:
+------------------
+Select os_username, username,userhost,terminal,timestamp,action_name,logoff_time,RETURNCODE 
+from DBA_AUDIT_SESSION where RETURNCODE in (1017,28000) and timestamp > sysdate - 1 order by timestamp; 
+
+Select os_username, username,userhost,terminal,timestamp,action_name,logoff_time,RETURNCODE 
+from DBA_AUDIT_SESSION where RETURNCODE in (1017,28000) and timestamp > sysdate - 1 and username like '%BLC_SRCAPP% order by timestamp; 
+
+col OS_USERNAME for a20; 
+col USERHOST for a20; 
+select username, os_username, userhost, client_id, trunc(timestamp), count(*) failed_logins from dba_audit_trail 
+where returncode = 28000 
+and timestamp > sysdate - 2
+group by username, os_username, userhost, client_id, trunc(timestamp);
+
+Create synonym:
+---------------
+system@<dbname>>CREATE OR REPLACE SYNONYM "ERED"."RWRD_AGRMNT_OFFR" FOR "ERRD"."RWRD_AGRMNT_OFFR";
+alter synonym CALYPSO_ABI_READ.REFER_SRC_ATTR_HIST compile;
+
+Drop table:
+-----------
+system@>DROP TABLE "ERRR"."RWRD_AGRMNT_OFFR";
+
+DB size
+-------
+DB Allocated size
+select
+( select sum(bytes)/1024/1024/1024 data_size from v$datafile ) +
+( select nvl(sum(bytes),0)/1024/1024/1024 temp_size from v$tempfile ) +
+( select sum(bytes)/1024/1024/1024 redo_size from sys.v$log ) +
+( select sum(BLOCK_SIZE*FILE_SIZE_BLKS)/1024/1024/1024 controlfile_size from v$controlfile) "Size in GB"
+from
+dual
+
+Linux service is online or not
+---------------------
+[root@ /]> crsctl check crs
+
+Directory Permission:
+---------------------
+
+SQL>GRANT read, write ON DIRECTORY LIVEDIR TO LIVE_OWNER 
+
+GRANT read, write ON DIRECTORY PA_OTIS_DIR TO PAWEB_WSPH; 
+
+stattype_locked should be null to update the statistics.
+--------------------------------------------------------
+
+select table_name, stattype_locked from dba_tab_statistics where table_name=‘TRANSACTION_ID’;
+
+Stats Gather
+------------
+EXECUTE DBMS_STATS.GATHER_TABLE_STATS(ownname => 'CRMUSER',  estimate_percent => NULL);
+EXEC DBMS_STATS.gather_table_stats('SCOTT', 'EMP');
+
+sys>exec dbms_stats.gather_schema_stats(ownname=>'DETS', degree=>16,estimate_percent=>100, cascade=>TRUE);
+
+Month wise size for database:
+-----------------------------
+oradba>select to_char(creation_time, 'MM-RRRR') "Month", sum(bytes)/1024/1024/1024 "Growth in GB"
+  2  from sys.v_$datafile
+  3  where to_char(creation_time,'RRRR')='2016'
+  4  group by to_char(creation_time, 'MM-RRRR')
+  5  order by  to_char(creation_time, 'MM-RRRR');
+
+Backup report
+-------------
+select SESSION_KEY, INPUT_TYPE,OUTPUT_BYTES,STATUS,
+to_char(START_TIME,'mm/dd/yy hh24:mi') start_time,
+to_char(END_TIME,'mm/dd/yy hh24:mi') end_time,
+elapsed_seconds/3600 hrs
+from V$RMAN_BACKUP_JOB_DETAILS
+order by session_key;
+
+DB sysnc.
+---------
+SELECT   a.thread#,  b. last_seq, a.applied_seq, a. last_app_timestamp, b.last_seq-a.applied_seq   ARC_DIFF FROM (SELECT  thread#, MAX(sequence#) applied_seq, MAX(next_time) last_app_timestamp FROM gv$archived_log WHERE applied = 'YES' GROUP BY thread#) a,(SELECT  thread#, MAX (sequence#) last_seq FROM gv$archived_log GROUP BY thread#) b WHERE a.thread# = b.thread#;
+
+Backup Percent complete
+-----------------------
+expdp \"sys/<password>@<dbname> as sysdba\" attach=SYS_EXPORT_SCHEMA
+
+Max cursor:
+-----------
+select a.value, s.username, s.sid, s.serial# from v$sesstat a, v$statname b, v$session s where a.statistic# = b.statistic#  and s.sid=a.sid and b.name = 'opened cursors current' and s.username is not null order by 1
+
+Gather stats:
+-------------
+exec dbms_stats.gather_schema_stats(ownname=>'DETS', degree=>16,estimate_percent=>100, cascade=>TRUE);
+
+Full or Archive log status:
+---------------------------
+set pages 200;
+set lines 200;
+col OUTPUT_BYTES_DISPLAY for a40;
+col TIME_TAKEN_DISPLAY for a40;
+select session_key,
+       input_type,
+       status,
+       to_char(start_time,'yyyy-mm-dd hh24:mi') start_time,
+       to_char(end_time,'yyyy-mm-dd hh24:mi')   end_time,
+       output_bytes_display,
+       time_taken_display
+from v$rman_backup_job_details
+where input_type!='ARCHIVELOG'
+order by session_key asc;
+
+plan for sqlid:
+---------------
+select * from TABLE(dbms_xplan.display_awr('091j4hqk2dcda'));
+
+Query running old plan or new plan:
+-----------------------------------
+set lines 155
+col execs for 999,999,999
+col avg_etime for 999,999.999
+col avg_lio for 999,999,999.9
+col begin_interval_time for a30
+col node for 99999
+break on plan_hash_value on startup_time skip 1
+select ss.snap_id, ss.instance_number node, begin_interval_time, sql_id, plan_hash_value,
+nvl(executions_delta,0) execs,
+(elapsed_time_delta/decode(nvl(executions_delta,0),0,1,executions_delta))/1000000 avg_etime,
+(buffer_gets_delta/decode(nvl(buffer_gets_delta,0),0,1,executions_delta)) avg_lio
+from DBA_HIST_SQLSTAT S, DBA_HIST_SNAPSHOT SS
+where sql_id = nvl('&sql_id','4dqs2k5tynk61')
+and ss.snap_id = S.snap_id
+and ss.instance_number = S.instance_number
+and executions_delta > 0
+order by 1, 2, 3;
+
+Explain plan and Plan History:
+------------------------------
+
+select * from TABLE(dbms_xplan.display_awr('2p52m9mpbvd0p')); 
+
+select to_char(BEGIN_INTERVAL_TIME,'dd-mon-yyyy hh24:mi'),to_char(end_interval_time,'dd-mon-yyyy hh24:mi'),
+ elapsed_time_total/60000000,executions_total,rows_processed_total,plan_hash_value from dba_hist_snapshot sn,
+   dba_hist_sqlstat sw where sn.snap_id=sw.snap_id and sw.sql_id='2p52m9mpbvd0p' order by sn.snap_id desc; 
+
+
+Runnig query/ Job:
+-------------------
+col osuser for a10
+select a.osuser,a.sid,a.serial#,a.machine,a.service_name,sql_id,a.status"Session" ,a.username,to_char(a.logon_time,'ddmmyy hh24:mi:ss') Logontime 
+from gv$session a WHERE  a.USERNAME='CPASM' order by Logontime ;
+
+select sid,serial#,username,status,sql_id,logon_time,machine,program,MODULE,OSUSER from gv$session where username='DFS_USER' and status!='INACTIVE';
+
+DBlink password expire:
+-----------------------
+>drop public database link P_COMMENTCTRLSYS.DFS.US;
+
+Database link dropped.
+
+>CREATE PUBLIC DATABASE LINK "DKFF.dts" CONNECT TO "KDD_DLNK" IDENTIFIED by "Put the new password here " USING '<dbaname>';
+
+Sync. sequence check:
+---------------------
+SELECT   a.thread#,  b. last_seq, a.applied_seq, a. last_app_timestamp, b.last_seq-a.applied_seq   ARC_DIFF FROM (SELECT  thread#, MAX(sequence#) applied_seq, MAX(next_time) last_app_timestamp FROM gv$archived_log WHERE applied = 'YES' GROUP BY thread#) a,
+(SELECT  thread#, MAX (sequence#) last_seq FROM gv$archived_log GROUP BY thread#) b WHERE a.thread# = b.thread#;
+
+dump transfer Screen command:
+-----------------------------
+
+>screen -S <my_process>
+>screen -ls
+>screen -d <my_process>
+
+Move a running process to a new screen shell:
+---------------------------------------------
+The first thing to do is to suspend the process. In my case, Irssi can be suspended by typing ctrl+z.
+
+Secondly, resume the process in background:
+
+$ bg
+Now, we will detach the process from its parent (the shell). So, when the parent process will be terminated, the child (Irssi) will be able to continue. For this, we use the disown builtin:
+
+$ disown irssi
+Launch a screen session:
+
+$ screen
+As we are in a screen session, we will retrieve the irssi process. To do so, we use the reptyr command which take a pid:
+
+$ reptyr <pid>
+To avoid the tedious pid research, we can use the pgrep command:
+
+$ reptyr $(pgrep irssi)
+Now the process is in a screen shell, we can safely detach our session and no longer worry about killing our X server or close our ssh connection.
+
+-A note about retty and reptyr - retty is for x86 Linux only, so it does not work on 64-bits distros
+
+Recap
+
+$ ctrl+z                # Suspend the current process
+$ disown irssi          # Detach irssi from the shell
+$ screen                # Launch screen
+$ reptyr $(pgrep irssi) # Get back the process

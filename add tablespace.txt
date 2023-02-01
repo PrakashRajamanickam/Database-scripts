@@ -1,0 +1,69 @@
+Add tablespace
+--------------
+show parameter fal/standby
+
+select name,total_mb/1024,free_mb/total_mb*100 as percentage_availlable from v$asm_diskgroup;
+
+select talbespace_name,name,file_name,SUM(bytes)/1024/1024 "Max megabytes" from dba_data_files where tablespace_name='';
+
+Alter tablespace 'tblname' ADD DATAFILE '+DGRP1' SIZE 30G AUTOEXTEND ON NEXT 100M MAXSIZE UNLIMITED;
+Alter tablespace 'tblname' ADD DATAFILE '+DGRP1' SIZE 30G AUTOEXTEND ON;
+
+psg pmon
+.oraenv
++ASM
+
+select total_mb/1024,free_mb/1024,name,failgroup,header_status,mode_status,state,path from v$asm_disk;
+
+Expand ASM disk
+-----------
+standard changes->standard changes No Unix ->No_UNIX_Expand Disk
+
+Expand disk ORCL:DATA02
+
+
+rename tablespace
+-------------------
+alter tablespace tbs1 rename to tbs2;
+
+alter tablespace tbs2 drop datafile '/u01/data01.dbf'
+drop tablespace tbs1 incude contents and datafiles;
+
+Rename datafile
+---------------
+alter tablespace tbs2 offline;
+go to the datafile location /u01
+
+mv data01.dbf data99.dbf
+
+alter database rename file '/u01/data01.dbf' to '/u01/data99.dbf';
+
+check block size and alter block size
+-------------------------------------
+show parameter db_block_size;  -- see the block size
+alter system set db_16k_cache_size=60m scope=both; --scope its update datafile and pfile
+create tablespace tbs2 datafile '/u01/data01.dbf' size 10m blocksize 16k;
+
+Temp Tablespace
+---------------
+select tablespace_name,bytes/1024/1024, status from dba_temp_files;
+create temporary tablespace temp1 '/u01/temp02.dbf' size 10m; --create datafiles in temp
+select * from database?properties where properties?name like '%tablespace%' --check default tablespace
+alter database default temporary tablespace temp1;  --changing the temporary tablespace
+
+temp Tablespace group
+---------------------
+select * from dba_tablespace_groups;
+create temporary tablespace temp1 tempfile '/u01/temp01.dbf' size 50m tablespace group tempgroup1;
+select tablespace_name,file_name from dba_temp_files;
+alter tablespace temp1 tablespace group tempgroup1;  --add temp files in the group
+select * from database_properties where property_name like '%TABLESPACE%'  --check with the default temporary tablesapce
+alter database default temporary tablesapce tempgroup1;   --assign the group to default temp tbl space
+
+
+
+
+
+
+
+

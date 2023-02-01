@@ -1,0 +1,1452 @@
+
+glogin:
+=======
+
+set lines 188 pages 300
+set time on timing on
+column owner format a8
+column name format a30
+col controlfile_type for a20
+col "CURRENT SESSION SID" for a20
+col "CURRENT SESSION" for a15
+SELECT sys_context('userenv','current_schema') as "CURRENT SESSION" from dual;
+SELECT sys_context('USERENV', 'SID') as "CURRENT SESSION SID" FROM DUAL;
+set sqlprompt "_user'@'_connect_identifier' SQL> '"
+alter session set nls_date_format='dd-mm-yyyy hh24:mi:ss';
+col HOST_NAME for a15
+col CONTROLFILE_TYPE for a18
+col DB_UNIQUE_NAME for a15
+col OPEN_MODE for a25
+col STARTUP_TIME for a23
+col STANDBY_DB_UNIQUE_NAME for a22
+col VERSION for a10
+col force_logging for a15
+select v.INSTANCE_NAME,v.HOST_NAME,d.DB_UNIQUE_NAME,d.PRIMARY_DB_UNIQUE_NAME "STANDBY_DB_UNIQUE_NAME",d.OPEN_MODE,
+d.DATABASE_ROLE,d.CONTROLFILE_TYPE,v.VERSION,TO_CHAR(v.startup_time, 'DD-MON-YYYY HH24:MI:SS') startup_time,v.LOGINS
+from v$instance v, v$database d
+where upper(v.INSTANCE_NAME)=d.NAME;
+
+set lines 188 pages 2000
+col OPEN_TIME for a40
+alter session set nls_date_format='dd-mm-yyyy hh24:mi:ss';
+select vc.CON_ID,vc.NAME,vc.OPEN_MODE,vc.RESTRICTED,vp.OPEN_TIME
+from v$containers vc, v$pdbs vp
+where vc.CON_ID = vp.CON_ID
+and vc.NAME = vp.NAME
+order by 1;
+
+
+alter session set container = &PLUGGABLE_DB_NAME;
+set sqlprompt "_USER'@'_CONNECT_IDENTIFIER::&CONT SQL> "
+
+
+glogin RAC:
+===========
+
+set pages 2000 lines 300
+set time on timing on
+column owner format a8
+column name format a30
+col controlfile_type for a20
+col "CURRENT SESSION SID" for a20
+col "CURRENT SESSION" for a15
+SELECT sys_context('userenv','current_schema') as "CURRENT SESSION" from dual;
+SELECT sys_context('USERENV', 'SID') as "CURRENT SESSION SID" FROM DUAL;
+SET SQLPROMPT '&_CONNECT_IDENTIFIER SQL>'
+alter session set nls_date_format='dd-mm-yyyy hh24:mi:ss';
+col HOST_NAME for a33
+col CONTROLFILE_TYPE for a18
+col DB_UNIQUE_NAME for a15
+col OPEN_MODE for a25
+col STARTUP_TIME for a23
+col STANDBY_DB_UNIQUE_NAME for a22
+col VERSION for a10
+select v.INST_ID,v.INSTANCE_NAME,v.HOST_NAME,d.DB_UNIQUE_NAME,d.PRIMARY_DB_UNIQUE_NAME "STANDBY_DB_UNIQUE_NAME",d.OPEN_MODE,
+d.DATABASE_ROLE,d.CONTROLFILE_TYPE,v.VERSION,TO_CHAR(v.startup_time, 'DD-MON-YYYY HH24:MI:SS') startup_time,v.LOGINS
+from gv$instance v, gv$database d
+where v.INST_ID=d.INST_ID 
+order by v.INST_ID;
+
+set lines 188 pages 2000
+set time on timing on
+col OPEN_TIME for a34
+col HOST_NAME for a12
+col NAME for a10
+col OPEN_MODE for a15
+col version for a10
+col "CURRENT SESSION SID" for a20
+col "CURRENT SESSION" for a15
+SELECT sys_context('userenv','current_schema') as "CURRENT SESSION" from dual;
+SELECT sys_context('USERENV', 'SID') as "CURRENT SESSION SID" FROM DUAL;
+SET SQLPROMPT '&_CONNECT_IDENTIFIER SQL>'
+break on INSTANCE_NAME on HOST_NAME
+alter session set nls_date_format='dd-mm-yyyy hh24:mi:ss';
+select v.INSTANCE_NAME,v.HOST_NAME,vc.CON_ID,vc.NAME,vc.OPEN_MODE,vc.RESTRICTED,vp.OPEN_TIME,d.DATABASE_ROLE,d.CONTROLFILE_TYPE,v.VERSION,TO_CHAR(v.startup_time, 'DD-MON-YYYY HH24:MI:SS') startup_time,v.LOGINS
+from gv$instance v,gv$database d,gv$containers vc, gv$pdbs vp
+where upper(v.INSTANCE_NAME)=d.NAME
+and vc.CON_ID = vp.CON_ID
+and vc.NAME = vp.NAME
+order by 3;
+
+glogin ASM -  asmname:
+======================
+
+set lines 188 pages 2000
+col ASM_HOST for a40
+col ASM_CLIENT for a30
+set time on timing on
+col "CURRENT_SID" for a15
+col "CURRENT SESSION" for a15
+SET SQLPROMPT '&_CONNECT_IDENTIFIER SQL>'
+alter session set nls_date_format='dd-mm-yyyy hh24:mi:ss';
+SELECT sys_context('userenv','current_schema') as "CURRENT SESSION" from dual;
+SELECT sys_context('USERENV', 'SID') as "CURRENT SESSION SID" FROM DUAL;
+break on ASM_HOST;
+select distinct i.host_name asm_host, i.instance_name asm_instance, a.instance_name asm_client,A.status,TO_CHAR(startup_time, 'DD-MON-YYYY HH24:MI:SS') startup_time
+from gv$instance i, gv$asm_client a 
+where i.inst_id = a.inst_id 
+order by 1;
+
+asm_inst.sql
+============
+
+col "Instance" form a8
+select c.group_number  "Group",g.name "Group Name",c.instance_name "Instance"
+from v$asm_client c,v$asm_diskgroup g
+where  g.group_number=c.group_number
+/
+
+Tablespace Check:
+==================
+
+ set linesize 200 pages 100 trimspool on
+   col name format a40
+   col Free_Space_Used for a15
+   SELECT d.status "Status", d.tablespace_name "Name",
+           TO_CHAR(NVL(a.bytes / 1024 / 1024 / 1024, 0),'99,999,990.900') "Size (GB)",
+           TO_CHAR(NVL(a.bytes - NVL(f.bytes, 0), 0)/1024/1024/1024,'99999999.999') "Used (GB)",
+           TO_CHAR(NVL(f.bytes /1024/1024/1024, 0),'99,999,990.900') "Free_Space_Avail (GB)",
+           TO_CHAR(NVL((a.bytes - NVL(f.bytes, 0)) / a.bytes * 100, 0), '990.00') "Used %"
+           FROM sys.dba_tablespaces d,
+           (select tablespace_name, sum(bytes) bytes from dba_data_files group by tablespace_name) a,
+           (select tablespace_name, sum(bytes) bytes from dba_free_space group by tablespace_name) f WHERE
+           d.tablespace_name = a.tablespace_name(+) AND d.tablespace_name = f.tablespace_name(+) AND NOT
+           (d.extent_management like 'LOCAL' AND d.contents like 'TEMPORARY')
+   UNION ALL
+   SELECT d.status
+           "Status", d.tablespace_name "Name",
+           TO_CHAR(NVL(a.bytes / 1024 / 1024 / 1024, 0),'99,999,990.900') "Size (GB)",
+           TO_CHAR(NVL(t.bytes,0)/1024/1024/1024,'99999999.999') "Used (GB)",
+           TO_CHAR(NVL(a.bytes/1024/1024/1024, 0),'99,999,990.900') "Free_Space_Avail (GB)",
+           TO_CHAR(NVL(t.bytes / a.bytes * 100, 0), '990.00') "Used %"
+           FROM sys.dba_tablespaces d,
+           (select tablespace_name, sum(bytes) bytes from dba_temp_files group by tablespace_name) a,
+           (select tablespace_name, sum(bytes_cached) bytes from v$temp_extent_pool group by tablespace_name) t
+           WHERE d.tablespace_name = a.tablespace_name(+) AND d.tablespace_name = t.tablespace_name(+) AND
+           d.extent_management like 'LOCAL' AND d.contents like 'TEMPORARY'
+           order by "Used %";
+
+tbsfreeg:
+=========
+
+set lines 300 pages 3000
+colu tspace format A20
+colu tot_ts_size format 999999999.999
+colu free_ts_size format 9999999999999.99999999
+colu used_ts_size format 9999999999.999
+select df.tablespace_name tspace,
+    df.bytes/(1024*1024*1024) tot_ts_size,
+  (df.bytes/(1024*1024*1024) -sum(fs.bytes)/(1024*1024*1024)) Used_ts_size,
+  sum(fs.bytes)/(1024*1024*1024) free_ts_size,
+        round(sum(fs.bytes)*100/df.bytes) free_pct,
+  round((df.bytes-sum(fs.bytes))*100/df.bytes) used_pct1
+from dba_free_space fs, (select tablespace_name, sum(bytes) bytes from dba_data_files  group by tablespace_name ) df
+ where fs.tablespace_name = df.tablespace_name
+  group by df.tablespace_name, df.bytes 
+ order by 6 desc
+/ 
+
+select tablespace_name,trunc((tablespace_size*8192)/(1024*1024*1024)) tablespace_size_gb,
+trunc((used_space*8192)/(1024*1024*1024)) used_gb,
+trunc(used_percent) used_percent from dba_tablespace_usage_metrics;
+
+select tablespace_name,trunc((tablespace_size*8192)/(1024*1024*1024*1024)) tablespace_size_tb,
+trunc((used_space*8192)/(1024*1024*1024*1024)) used_tb,
+trunc(used_percent) used_percent from dba_tablespace_usage_metrics;
+
+To resize a datafile in MB
+===========================
+
+SYNTAX ---> alter database datafile '<file_path>/<file_name>.dbf' resize <file_size>m;
+
+example:  ALTER DATABASE DATAFILE '/finhdata3JG/DB7018JG_data/log_history_1_DB7018JG.dbf' RESIZE 4000m;
+
+		  ALTER DATABASE DATAFILE '/finhdata3JG/DB7018JG_data/log_history_1_DB7018JG.dbf' RESIZE 4g;
+
+
+To add a datafile to a TABLESPACE/INDEX in MB
+==============================================
+
+SYNTAX ---> ALTER TABLESPACE <TABLESPACE_NAME> ADD DATAFILE 'FILE_PATH/FILE_NAME' SIZE 1000M;
+
+example : alter tablespace IDX_ACCT_DETAILS_2 add datafile '/finhdata1UG/DB7018UP_data/idx_acct_details_2_2_DB7018UP.dbf' size 100m autoextend on;
+
+To add a datafile to a TABLESPACE/INDEX in ASM
+==============================================
+
+alter tablespace SYSAUX add datafile '+DGRP1' size 30g autoextend on;
+
+To add a tempfile to a TEMP TABLESPACE in ASM
+==============================================
+
+alter tablespace TEMP add tempfile '+DGRP1' size 30g autoextend on;
+		   
+ASM DISK CHECK:
+===============
+
+1. In GB
+SET LINESIZE 150 
+SET PAGESIZE 9999 
+COLUMN group_name FORMAT a25 HEAD 'DISKGROUP_NAME' 
+COLUMN state FORMAT a11 HEAD 'STATE' 
+COLUMN type FORMAT a6 HEAD 'TYPE' 
+COLUMN total_mb FORMAT 999,999,999 HEAD 'TOTAL SIZE(GB)' 
+COLUMN free_mb FORMAT 999,999,999 HEAD 'FREE SIZE (GB)' 
+COLUMN used_mb FORMAT 999,999,999 HEAD 'USED SIZE (GB)' 
+COLUMN pct_used FORMAT 999.99 HEAD 'PERCENTAGE USED' 
+SELECT distinct name group_name , state state , type type , 
+round(total_mb/1024) TOTAL_GB , round(free_mb/1024) free_gb , 
+round((total_mb - free_mb) / 1024) used_gb , 
+round((1- (free_mb / total_mb))*100, 2) pct_used from 
+v$asm_diskgroup 
+ORDER BY name;
+
+2. In TB
+SET LINESIZE 150 
+SET PAGESIZE 9999 
+COLUMN group_name FORMAT a25 HEAD 'DISKGROUP_NAME' 
+COLUMN state FORMAT a11 HEAD 'STATE' 
+COLUMN type FORMAT a6 HEAD 'TYPE' 
+COLUMN total_mb FORMAT 999,999,999 HEAD 'TOTAL SIZE(TB)' 
+COLUMN free_mb FORMAT 999,999,999 HEAD 'FREE SIZE (TB)' 
+COLUMN used_mb FORMAT 999,999,999 HEAD 'USED SIZE (TB)' 
+COLUMN pct_used FORMAT 999.99 HEAD 'PERCENTAGE USED' 
+SELECT distinct name group_name , state state , type type , 
+round(total_mb/1024/1024) TOTAL_TB , round(free_mb/1024/1024) free_tb , 
+round((total_mb - free_mb) / 1024 /1024) used_tb , 
+round((1- (free_mb / total_mb))*100, 2) pct_used from 
+v$asm_diskgroup 
+ORDER BY name;
+
+ASM Diskgroup more 90% Utilized:
+================================
+
+USe this one :
+
+SET LINESIZE 150 
+SET PAGESIZE 9999 
+SET VERIFY off
+COLUMN group_name FORMAT a25 HEAD 'DISKGROUP_NAME' 
+COLUMN state FORMAT a11 HEAD 'STATE' 
+COLUMN type FORMAT a6 HEAD 'TYPE' 
+COLUMN total_mb FORMAT 999,999,999 HEAD 'TOTAL SIZE(GB)' 
+COLUMN free_mb FORMAT 999,999,999 HEAD 'FREE SIZE (GB)' 
+COLUMN used_mb FORMAT 999,999,999 HEAD 'USED SIZE (GB)' 
+COLUMN pct_used FORMAT 999.99 HEAD 'PERCENTAGE USED' 
+COLUMN pct_free FORMAT 999.99 HEAD 'PERCENTAGE FREE' 
+SELECT distinct name group_name , state state , type type , 
+round(total_mb/1024) TOTAL_GB , round(free_mb/1024) free_gb , 
+round((total_mb - free_mb) / 1024) used_gb , 
+round((1- (free_mb / total_mb))*100, 2) pct_used ,
+round (FREE_MB/TOTAL_MB*100,2) pct_free from 
+v$asm_diskgroup where round((1- (free_mb / total_mb))*100, 2) > 90 ORDER BY name;
+
+
+ASM DISK INFO:
+==============
+
+SET LINESIZE  188
+SET PAGESIZE  2000
+SET VERIFY    off
+
+COLUMN disk_group_name        FORMAT a20           HEAD 'Disk|Group Name'
+COLUMN disk_file_path         FORMAT a50           HEAD 'Path'
+COLUMN disk_file_name         FORMAT a18           HEAD 'File Name'
+COLUMN disk_file_fail_group   FORMAT a16           HEAD 'Fail Group'
+COLUMN total_mb               FORMAT 999,999,999   HEAD 'File Size (GB)'
+COLUMN used_mb                FORMAT 999,999,999   HEAD 'Used Size (GB)'
+COLUMN pct_used               FORMAT 999.99        HEAD 'Pct. Used'
+
+break on report on disk_group_name skip 1
+
+compute sum label ""              of total_gb used_gb on disk_group_name
+compute sum label "Grand Total: " of total_gb used_gb on report
+
+SELECT
+    NVL(a.name, '[CANDIDATE]')                       disk_group_name
+  , b.path                                           disk_file_path
+  , b.name                                           disk_file_name
+  , b.failgroup                                      disk_file_fail_group
+  , b.total_mb/1024                                  total_gb
+  , (b.total_mb - b.free_mb)/1024                  used_gb
+  , ROUND((1- (b.free_mb / b.total_mb))*100, 2)      pct_used
+FROM     v$asm_diskgroup a , v$asm_disk b 
+where a.group_number=b.group_number(+)
+ORDER BY  a.name
+/
+
+To check rebalance activity:
+============================
+
+set lines 120
+select sysdate, GROUP_NUMBER, OPERATION,STATE, POWER, ACTUAL,SOFAR, EST_WORK, EST_RATE, EST_MINUTES
+from v$asm_operation
+/
+
+Kill SID:
+=========
+
+select /*+RULE*/ 'alter system kill session '''||sid||','||serial# ||''' immediate;' from v$session where sid in (&SID);
+
+Lock on Table:
+==============
+1.
+column oracle_username format a20
+column os_user_name format a15
+column object_name format a30
+column object_type format a37
+column owner format a20
+column "OBJECT OWNER" for a30
+set lines 188 pages 2000
+select a.session_id,a.oracle_username, a.os_user_name, b.owner "OBJECT OWNER", b.object_name,b.object_type,a.locked_mode 
+from (select object_id, SESSION_ID, ORACLE_USERNAME, OS_USER_NAME, LOCKED_MODE from v$locked_object) a,
+(select object_id, owner, object_name,object_type from dba_objects) b
+where a.object_id=b.object_id;
+
+2.
+SELECT
+   s.blocking_session, 
+   s.sid, 
+   s.serial#, 
+   s.seconds_in_wait
+FROM
+   gv$session s
+WHERE
+   blocking_session IS NOT NULL;
+
+3.
+SELECT
+s.inst_id,
+s.blocking_session,
+s.sid,
+s.serial#,
+s.seconds_in_wait,
+s.event
+FROM
+gv$session s
+WHERE
+blocking_session IS NOT NULL and s.seconds_in_wait > 60;
+
+4.
+col object for A35
+col object_type for A20
+col serial# for 999999999
+col osuser for A15
+col lock_mode for A40
+col username for A15
+select
+   c.owner || '.' ||  c.object_name object,
+   c.object_type,
+   DECODE(a.locked_mode, 0, 'NONE'
+           ,  1, '1 - Null'
+           ,  2, '2 - Row Share Lock'
+           ,  3, '3 - Row Exclusive Table Lock.'
+           ,  4, '4 - Share Table Lock'
+           ,  5, '5 - Share Row Exclusive Table Lock.'
+           ,  6, '6 - Exclusive Table Lock'
+           ,  locked_mode, ltrim(to_char(locked_mode,'990'))) lock_mode,
+   b.inst_id as node,
+   b.sid,
+   b.serial#,
+   b.status,
+   b.username,
+   b.osuser
+from
+   gv$locked_object a ,
+   gv$session b,
+   dba_objects c
+where b.sid = a.session_id
+and   a.object_id = c.object_id
+and   a.inst_id=b.inst_id;
+
+5.
+col BOX for a25
+col PID for a20
+col PROGRAM for a50
+select 'Sessions on database '||substr(name,1,8) from v$database;
+set heading on;
+select
+   substr(a.spid,1,9) pid,
+   substr(b.sid,1,5) sid,
+   substr(b.serial#,1,5) ser#,
+   substr(b.machine,1,25) box,
+   substr(b.username,1,10) username,
+   substr(b.osuser,1,8) os_user,
+   substr(b.program,1,30) program
+from v$session b, v$process a
+where b.paddr = a.addr
+and type='USER'
+order by spid;
+
+Select object_name as "object name", s.sid, s.serial#, p.spid as "system process number"
+from v$locked_object l , dba_objects o , v$session s , v$process p
+where l.object_id=o.object_id 
+and l.session_id=s.sid 
+and s.paddr=p.addr;
+
+DIR:
+====
+1.
+set lines 188 pages 2000
+col OWNER for a10
+col DIRECTORY_NAME for a22
+col DIRECTORY_PATH for a69
+select OWNER,DIRECTORY_NAME,DIRECTORY_PATH 
+from dba_directories;
+
+2.
+set lines 188 pages 2000
+col OWNER for a20
+col DIRECTORY_NAME for a22
+col DIRECTORY_PATH for a80
+select OWNER,DIRECTORY_NAME,DIRECTORY_PATH 
+from dba_directories
+where DIRECTORY_NAME='&DIRECTORY_NAME';
+
+CREATE DIRECTORY LOGICAL_BACKUP  AS '/oradba/dba_work/POGC/';
+
+CREATE DIRECTORY P1DATE_SWOHINT  AS '/oradba/dba_work/irfanb/P1DATE_SELECT/WOHINT/';
+
+Database Size:
+==============
+
+col "Database Size" format a20
+col "Free space" format a20
+col "Used space" format a20
+select round(sum(used.bytes) / 1024 / 1024 / 1024 ) || ' GB' "Database Size"
+,	round(sum(used.bytes) / 1024 / 1024 / 1024 ) - 
+	round(free.p / 1024 / 1024 / 1024) || ' GB' "Used space"
+,	round(free.p / 1024 / 1024 / 1024) || ' GB' "Free space"
+from    (select bytes from v$datafile
+             union all
+             select bytes from v$tempfile
+             union all
+             select bytes from v$log) used
+,	(select sum(bytes) as p from dba_free_space) free
+group by free.p;
+
+
+DDF:
+====
+
+1. 
+select TABLESPACE_NAME,STATUS,count(FILE_ID)
+from dba_data_files 
+where TABLESPACE_NAME='&TABLESPACE_NAME' 
+group by TABLESPACE_NAME,STATUS;
+
+2.
+set lines 188 pages 2000
+col FILE_NAME for a90
+col TABLESPACE_NAME for a23
+col BIGFILE for a10
+col TABLESPACE_NAME for a20
+break on tablespace_name;
+select df.TABLESPACE_NAME,df.FILE_ID,df.FILE_NAME,df.BYTES/1024/1024/1024 "SIZE_GB",df.MAXBYTES/1024/1024/1024 "TOTAL_GB",df.STATUS,df.AUTOEXTENSIBLE,dt.BIGFILE
+from dba_data_files df,dba_tablespaces dt
+where df.TABLESPACE_NAME='&TABLESPACE_NAME'
+and df.TABLESPACE_NAME=dt.TABLESPACE_NAME
+order by FILE_ID,FILE_NAME;
+
+DDF Add date:
+=============
+
+1.
+set lines 188 pages 2000
+col FILE_NAME for a90
+col TABLESPACE_NAME for a20
+break on tablespace_name;
+select a.tablespace_name,a.FILE_ID,a.file_name,b.creation_time,a.AUTOEXTENSIBLE
+from dba_data_files a,v$datafile b 
+where a.tablespace_name='&TABLESPACE_NAME'
+and a.file_id=b.file# 
+order by 1,2;
+
+2.
+set lines 188 pages 2000
+col FILE_NAME for a90
+col TABLESPACE_NAME for a20
+break on tablespace_name;
+select a.tablespace_name,a.FILE_ID,a.file_name,b.creation_time,a.AUTOEXTENSIBLE
+from dba_data_files a,v$datafile b 
+where a.tablespace_name='&TABLESPACE_NAME'
+and b.creation_time between '07-06-2021 04:30' and '07-06-2021 05:00'
+and a.file_id=b.file# 
+order by 1,2;
+
+DDT:
+====
+
+set lines 188 pages 2000
+col FILE_NAME for a90
+col TABLESPACE_NAME for a23
+col BIGFILE for a10
+select df.FILE_ID,df.FILE_NAME,df.TABLESPACE_NAME,df.BYTES/1024/1024/1024 "SIZE_GB",df.MAXBYTES/1024/1024/1024 "TOTAL_GB",df.STATUS,df.AUTOEXTENSIBLE,dt.BIGFILE
+from dba_temp_files df,dba_tablespaces dt
+where df.TABLESPACE_NAME='&TABLESPACE_NAME'
+and df.TABLESPACE_NAME=dt.TABLESPACE_NAME
+order by FILE_ID,FILE_NAME;
+
+column name format a55
+column info format a65
+select t.TABLESPACE_NAME,t.FILE_NAME,  to_char(t.BYTES,'999,999,999,999')||' Bytes, '||t.STATUS||' '||d.STATUS||' '|| d.CONTENTS Info
+from dba_temp_files t, dba_tablespaces d
+where t.TABLESPACE_NAME = d.TABLESPACE_NAME ;
+
+set lines 188
+set pages 2000
+col FILE_NAME for a70
+col TABLESPACE_NAME for a23
+select FILE_NAME,TABLESPACE_NAME,
+BYTES/1024/1024/1024 "SIZE_GB",
+MAXBYTES/1024/1024/1024 "TOTAL_GB",
+STATUS,AUTOEXTENSIBLE 
+from dba_temp_files;
+
+
+DDT Add date:
+=============
+
+set lines 188 pages 2000
+col FILE_NAME for a90
+col TABLESPACE_NAME for a20
+break on tablespace_name;
+select a.tablespace_name,a.FILE_ID,a.file_name,b.creation_time,a.AUTOEXTENSIBLE
+from dba_temp_files a,v$tempfile b 
+where a.file_id=b.file# 
+and a.tablespace_name='&TABLESPACE_NAME'
+order by 1,2;
+
+Check Table belongs to which schema:
+====================================
+
+col OWNER for a30
+col TABLE_NAME for a30
+set lines 188 pages 2000
+select OWNER,TABLE_NAME,TABLESPACE_NAME,STATUS,LAST_ANALYZED,PARTITIONED 
+from dba_tables 
+where TABLE_NAME=upper('&TABLE_NAME');
+
+
+Alert:
+======
+
+set lines 188 pages 2000
+col value for a60
+select * from gv$diag_info 
+where name ='Diag Trace' 
+order by 1;
+
+
+DBA_USERS:
+==========
+
+1.
+set lines 300 pages 2000
+colu username format A30
+colu default_TS format A18
+colu TEMP_TS format A20
+colu profile format A20
+colu created format A20
+colu status format a20
+col LAST_LOGIN for a40
+col ORACLE_MAINTAINED for a18
+select user_id, username,
+default_tablespace Default_TS,
+temporary_tablespace Temp_TS,
+created,profile,EXPIRY_DATE, 
+account_status Status,LAST_LOGIN,ORACLE_MAINTAINED
+from dba_users
+where username=upper('&USERNAME')
+order by status,username;
+
+2.
+set lines 300 pages 2000
+colu username format A30
+colu default_TS format A18
+colu TEMP_TS format A20
+colu profile format A20
+colu created format A20
+colu status format a20
+col LAST_LOGIN for a40
+col ORACLE_MAINTAINED for a18
+select user_id, username,
+default_tablespace Default_TS,
+temporary_tablespace Temp_TS,
+created,profile,EXPIRY_DATE, 
+account_status Status,LAST_LOGIN,ORACLE_MAINTAINED
+from dba_users
+order by status,username;
+
+select u.username, u.created, round(nvl(sum(s.bytes)/1024/1024,0),2) size_mb
+from dba_users u
+left outer join dba_segments s on (s.owner = u.username)
+where username=upper('&USERNAME')
+group by u.username, u.created
+order by u.username;
+
+irman:
+======
+
+set lines 220 pages 1000
+col cf for 9,999
+col df for 9,999
+col elapsed_seconds heading "ELAPSED|SECONDS"
+col i0 for 9,999
+col i1 for 9,999
+col l for 9,999
+col output_mbytes for 9,999,999 heading "OUTPUT|GBYTES"
+col session_recid for 999999 heading "SESSION|RECID"
+col session_stamp for 99999999999 heading "SESSION|STAMP"
+col status for a10 trunc
+col time_taken_display for a10 heading "TIME|TAKEN"
+col output_instance for 9999 heading "OUT|INST"
+col START_TIME for a25
+col END_TIME for a25
+select
+  j.session_recid, j.session_stamp,
+  to_char(j.start_time, 'yyyy-mm-dd hh24:mi:ss') start_time,
+  to_char(j.end_time, 'yyyy-mm-dd hh24:mi:ss') end_time,
+  (j.output_bytes/1024/1024/1024) output_gbytes, j.status, j.input_type,
+  decode(to_char(j.start_time, 'd'), 1, 'Sunday', 2, 'Monday',
+                                     3, 'Tuesday', 4, 'Wednesday',
+                                     5, 'Thursday', 6, 'Friday',
+                                     7, 'Saturday') dow,
+  j.elapsed_seconds, j.time_taken_display,
+  x.cf, x.df, x.i0, x.i1, x.l,
+  ro.inst_id output_instance
+from V$RMAN_BACKUP_JOB_DETAILS j
+  left outer join (select
+                     d.session_recid, d.session_stamp,
+                     sum(case when d.controlfile_included = 'YES' then d.pieces else 0 end) CF,
+                     sum(case when d.controlfile_included = 'NO'
+                               and d.backup_type||d.incremental_level = 'D' then d.pieces else 0 end) DF,
+                     sum(case when d.backup_type||d.incremental_level = 'D0' then d.pieces else 0 end) I0,
+                     sum(case when d.backup_type||d.incremental_level = 'I1' then d.pieces else 0 end) I1,
+                     sum(case when d.backup_type = 'L' then d.pieces else 0 end) L
+                   from
+                     V$BACKUP_SET_DETAILS d
+                     join V$BACKUP_SET s on s.set_stamp = d.set_stamp and s.set_count = d.set_count
+                   where s.input_file_scan_only = 'NO'
+                   group by d.session_recid, d.session_stamp) x
+    on x.session_recid = j.session_recid and x.session_stamp = j.session_stamp
+  left outer join (select o.session_recid, o.session_stamp, min(inst_id) inst_id
+                   from GV$RMAN_OUTPUT o
+                   group by o.session_recid, o.session_stamp)
+    ro on ro.session_recid = j.session_recid and ro.session_stamp = j.session_stamp
+where j.start_time > trunc(sysdate)-20
+order by j.start_time;
+
+rman.sql
+========
+
+set lines 300 pages 2000
+col USERNAME for a10
+col EVENT for a30
+col LOGON_TIME for a30
+col MODULE for a60
+select inst_id,sid,serial#,username,status, event, seconds_in_wait,last_call_et/60 ,
+to_char(logon_time,'dd-Mon-yyyy hh24:mi:ss') logon_time,module 
+from gv$session 
+where program like '%rman%' 
+order by module,1,logon_time,sid;
+
+rmanbkp.sql
+===========
+
+1.
+col OUTPUT_BYTES_DISPLAY for a10
+col TIME_TAKEN_DISPLAY for a10
+col START_TIME for a30
+col END_TIME for a30
+set line 1000
+select session_key, input_type,
+to_char(start_time,'DD-MON-YYYY HH24:MI:SS') start_time,
+to_char(end_time,'DD-MON-YYYY HH24:MI:SS')   end_time,
+output_bytes_display,
+time_taken_display,status
+from v$rman_backup_job_details
+where start_time > sysdate - 30
+order by session_key asc;
+
+2.
+set lines 999
+COL STATUS FORMAT a9
+COL hrs FORMAT 999.99
+col OUTPUT_BYTES_DISPLAY for a35
+SELECT SESSION_KEY, INPUT_TYPE, STATUS,
+TO_CHAR(START_TIME,'DD-MON-YYYY HH24:MI:SS') start_time,
+TO_CHAR(END_TIME,'DD-MON-YYYY HH24:MI:SS') end_time,
+decode(to_char(start_time, 'd'), 1, 'Sunday', 2, 'Monday',3, 'Tuesday', 4, 'Wednesday',5, 'Thursday', 6, 'Friday',7, 'Saturday') dow,
+ELAPSED_SECONDS/3600 hrs, 
+OUTPUT_BYTES_DISPLAY
+FROM V$RMAN_BACKUP_JOB_DETAILS
+where start_time > sysdate - 15
+ORDER BY SESSION_KEY;
+
+
+Kill RMAN Backup
+================
+
+set serveroutput on
+declare
+  cursor c_rman is
+  select  b.sid
+  ,       b.serial#
+  ,       b.client_info
+  ,       a.spid
+  from v$process a, v$session b
+  where a.addr=b.paddr and client_info like 'rman%';
+begin
+  for r_rman in c_rman
+  loop
+    dbms_output.put_line('-- Killing RMAN session ' || r_rman.client_info );
+    dbms_output.put_line( 'alter system kill session '''
+                        || r_rman.sid
+                        || ','
+                        || r_rman.serial#
+                        || ''' immediate;'
+                        || chr(10)
+                        );
+  end loop;
+end;
+/
+
+Check Service:
+==============
+
+1.
+set lines 188 pages 2000
+col NAME for a30
+col NETWORK_NAME for a35
+col FAILOVER_METHOD for a25
+col FAILOVER_TYPE for a30
+select name,network_name,creation_date,clb_goal,
+FAILOVER_METHOD,FAILOVER_RETRIES,FAILOVER_TYPE
+from dba_services;
+
+2.
+col NETWORK_NAME for a30
+col PDB for a30
+set lines 188 pages 2000
+select service_id,name,network_name,creation_date,pdb,con_id 
+from cdb_services;
+
+alter system set service_names='cp2emrep_no1,p2emrep';
+
+alter system set service_names='p1pbatch_dg_rw_jdbc';
+
+alter system set local_listener='(ADDRESS=(PROTOCOL=TCP)(HOST=vm-pdb-181)(PORT=1521))' scope=both;
+
+Check Sync Status : (Execute in Production Database)
+=====================================================
+
+1.
+Prompt "************************** Archive log gap **********************"
+
+select systimestamp from dual
+
+set line 300 pages 5000
+col dest_name for a30
+col destination for a30
+col error for a40
+break on thread# skip 1
+
+--select thread#, dest_id, dest_name, destination, last_sequence, last_sequence - first_value (last_sequence) over (partition by thread# order by dest_id) diff,
+--STATUS,ERROR
+--from (select al.thread#, al.dest_id, ad.dest_name, ad.destination,ad.STATUS,ad.ERROR, max(al.sequence#) last_sequence from gv$archived_log al, gv$archive_dest
+-- ad
+--where al.dest_id=ad.dest_id and al.thread#=ad.inst_id
+--group by al.thread#, al.dest_id, ad.dest_name, ad.destination ,ad.STATUS,ad.ERROR
+--order by 1,2 ) ;
+
+select al.thread#, al.dest_id, ad.dest_name, ad.destination,ad.STATUS,ad.ERROR
+from gv$archived_log al, gv$archive_dest ad
+where al.dest_id=ad.dest_id and al.thread#=ad.inst_id
+group by al.thread#, al.dest_id, ad.dest_name, ad.destination ,ad.STATUS,ad.ERROR
+order by 1,2;
+CLEAR BREAKS
+
+--select thread#, max(case when dest_id = 1 then SEQUENCE# end) dest_1,
+--max(case when dest_id = 1 then SEQUENCE# end) - max(case when dest_id = 2  and applied = 'YES' then SEQUENCE# end) dest_2,
+--max(case when dest_id = 1 then SEQUENCE# end) - max(case when dest_id = 3  and applied = 'YES' then SEQUENCE# end) dest_3,
+--max(case when dest_id = 1 then SEQUENCE# end) - max(case when dest_id = 4  and applied = 'YES' then SEQUENCE# end) dest_4,
+--max(case when dest_id = 1 then SEQUENCE# end) - max(case when dest_id = 5  and applied = 'YES' then SEQUENCE# end) dest_5,
+--max(case when dest_id = 1 then SEQUENCE# end) - max(case when dest_id = 6  and applied = 'YES' then SEQUENCE# end) dest_6
+--from v$archived_log group by thread#;
+
+set line 300
+break on  dest_id skip 1
+set pagesize 5000
+select b.dest_id,a.thread#,a.log_archived,b.log_applied,(a.log_archived-b.log_applied) log_gap
+from
+(
+select thread#,max(sequence#)log_archived from gv$archived_log where archived='YES' and RESETLOGS_TIME=(select max(RESETLOGS_TIME) from v$log_history) group by thread#
+)a,
+(
+select thread#,dest_id,max(sequence#)log_applied from gv$archived_log where applied='YES' and RESETLOGS_TIME=(select max(RESETLOGS_TIME) from v$log_history) and dest_id >1 group by dest_id,thread#
+)b
+where a.thread#=b.thread#
+order by dest_id,thread#;
+clear breaks
+
+
+2.
+set heading on
+set pages 2000
+set echo off
+set term off
+set prompt off
+set trimspool on
+set lines 188
+col destination form a20
+col error form a30
+col type form a10
+select  ads.DESTINATION , ads.STATUS, ads.TYPE, ads.ARCHIVED_SEQ#, ads.APPLIED_SEQ#,
+a.ARCHIVED_SEQ#-ads.ARCHIVED_SEQ# archive_gap, decode(ads.APPLIED_SEQ#,0,0,a.ARCHIVED_SEQ#-ads.APPLIED_SEQ#) applied_gap, ads.ERROR 
+from v$archive_dest_status ads, (select ARCHIVED_SEQ# from v$archive_dest_status where dest_id=1) a
+where status <> 'INACTIVE';
+
+do.sql:
+=======
+
+set lines 188 pages 2000
+col OWNER for a20
+col OBJECT_NAME for a33
+col OBJECT_TYPE for a25
+select OWNER,OBJECT_NAME,OBJECT_TYPE,CREATED,STATUS from dba_objects 
+where OBJECT_NAME='&OBJECT_NAME'
+order by OBJECT_TYPE;
+
+
+Schema Size:
+=============
+
+col OWNER for a25
+set lines 188 pages 2000
+select owner,TABLESPACE_NAME,sum(bytes)/1024/1024/1024 as "SIZE in GB"
+from dba_segments
+where owner=upper('&SCHEMA_NAME')
+group by owner,TABLESPACE_NAME
+/
+
+FRA:
+====
+
+1.
+col NAME for a30
+set lines 188 pages 2000
+SELECT NAME,SPACE_LIMIT/1024/1024/1024 TOTAL_GB,
+(SPACE_LIMIT - SPACE_USED + SPACE_RECLAIMABLE)/1024/1024/1024 AS FREE_GB,
+ROUND((SPACE_USED - SPACE_RECLAIMABLE)/SPACE_LIMIT * 100) AS "FULL %"
+FROM V$RECOVERY_FILE_DEST;
+
+2.
+col NAME for a30
+set lines 188 pages 2000
+SELECT NAME,SPACE_LIMIT/1024/1024/1024/1024 TOTAL_TB,
+(SPACE_LIMIT - SPACE_USED + SPACE_RECLAIMABLE)/1024/1024/1024/1024 AS FREE_TB,
+ROUND((SPACE_USED - SPACE_RECLAIMABLE)/SPACE_LIMIT * 100) AS "FULL %"
+FROM V$RECOVERY_FILE_DEST;
+
+3.
+select name, 
+round(space_limit / 1024/1024/1024) space_limit_in_gb, 
+round(space_used / 1024/1024/1024) space_used_in_gb,
+round(space_limit - space_used + space_reclaimable)/1024/1024/1024 as space_free_in_gb,
+round((space_used / 1024/1024/1024) / (space_limit / 1024/1024/1024),2)*100 percent_usage
+from v$recovery_file_dest;
+
+
+FRA_U:
+=======
+
+Prompt "************************** USE (GB) of FRA **********************"
+
+col NAME for a30
+set lines 188 pages 2000
+SELECT NAME,SPACE_LIMIT/1024/1024/1024 TOTAL_GB,
+(SPACE_LIMIT - SPACE_USED + SPACE_RECLAIMABLE)/1024/1024/1024 AS FREE_GB,
+ROUND((SPACE_USED - SPACE_RECLAIMABLE)/SPACE_LIMIT * 100) AS "FULL %"
+FROM V$RECOVERY_FILE_DEST;
+
+Prompt "************************** FRA Occupants **********************"
+
+SELECT * FROM V$FLASH_RECOVERY_AREA_USAGE;
+
+Prompt "************************** Location and size of the FRA **********************"
+
+show parameter db_recovery_file_dest;
+
+Prompt "************************** Size, usage, Reclaimable space used **********************"
+
+SELECT 
+  ROUND((A.SPACE_LIMIT / 1024 / 1024 / 1024 ), 2) AS FLASH_IN_GB, 
+  ROUND((A.SPACE_USED / 1024 / 1024 / 1024 ), 2) AS FLASH_USED_IN_GB, 
+  ROUND((A.SPACE_RECLAIMABLE / 1024 / 1024 / 1024 ), 2) AS FLASH_RECLAIMABLE_GB,
+  SUM(B.PERCENT_SPACE_USED)  AS PERCENT_OF_SPACE_USED
+FROM 
+  V$RECOVERY_FILE_DEST A,
+  V$FLASH_RECOVERY_AREA_USAGE B
+GROUP BY
+  SPACE_LIMIT, 
+  SPACE_USED , 
+  SPACE_RECLAIMABLE ;
+
+MRP:
+====
+
+set lines 188 pages 2000
+select inst_id,process,client_process,status,thread#,sequence#,block#,blocks 
+from gv$managed_standby 
+where process like '%MRP%';
+
+managed_standby:
+================
+
+set lines 188 pages 2000
+select process,client_process,status,thread#,sequence#,block#,blocks  
+from v$managed_standby;
+
+RBS Usage: (UNDO TABLESPACE)
+==========
+
+set linesize 220
+col RBS format a40
+col sid format 99999
+col user format a12
+col status format a12
+SELECT r.name "RBS", s.sid, s.serial#, s.username "USER", t.status,
+        t.cr_get, t.phy_io, t.used_ublk, t.noundo
+ --       ,substr(s.program, 1, 78) "COMMAND"
+ FROM   sys.v_$session s, sys.v_$transaction t, sys.v_$rollname r
+ WHERE  t.addr = s.taddr
+   and  t.xidusn = r.usn
+ ORDER  BY 1
+/ 
+
+
+ONLINE REDO LOGS:
+=================
+
+set lines 188
+set pages 2000
+col MEMBER for a78 
+select l.group# ,l.THREAD#,l.bytes/1024/1024 "SIZE_MB" , l.status , lf.member,lf.TYPE
+from v$logfile lf , v$log l
+where lf.group# = l.group#
+order by 2,1;
+
+set lines 188
+set pages 2000
+col MEMBER for a78 
+select l.group# ,l.THREAD#,l.bytes/1024/1024/1024 "SIZE_GB", l.status,l.members,lf.member,lf.TYPE
+from v$logfile lf , v$log l
+where lf.group# = l.group#
+order by 2,1;
+
+SELECT inst_id, group#, type, member FROM gv$logfile WHERE type = 'STANDBY' order by group#;
+
+STANDBY REDO LOGS:
+===================
+
+select INST_ID,GROUP#,THREAD#,BYTES/1024/1024/1024 "SIZE_GB",STATUS from gv$standby_log;
+
+set lines 188
+set pages 2000
+col MEMBER for a78
+col TYPE for a7
+select lf.GROUP#,sl.THREAD#,sl.bytes/1024/1024/1024 "SIZE_GB",sl.status,lf.member,lf.type
+from v$logfile lf, v$standby_log sl
+where lf.group#=sl.group#
+order by 2,1;
+
+set lines 188
+set pages 2000
+col MEMBER for a78
+col TYPE for a7
+select lf.GROUP#,sl.THREAD#,sl.bytes/1024/1024 "SIZE_MB",sl.status,lf.member,lf.type
+from gv$logfile lf, gv$standby_log sl
+where lf.group#=sl.group#
+order by 1,2;
+
+
+dba_objects:
+=============
+
+set lines 188 pages 2000
+col OWNER for a20
+col OBJECT_NAME for a33
+col OBJECT_TYPE for a15
+select OWNER,OBJECT_NAME,OBJECT_TYPE,CREATED from dba_objects 
+where OBJECT_NAME='&OBJECT_NAME'
+order by OBJECT_TYPE;
+
+dba_tables:
+===========
+
+col OWNER for a30
+col TABLE_NAME for a30
+set lines 188 pages 2000
+select OWNER,TABLE_NAME,TABLESPACE_NAME,STATUS,LAST_ANALYZED,PARTITIONED 
+from dba_tables 
+where TABLE_NAME=upper('&TABLE_NAME');
+
+
+service:
+=========
+
+set lines 188 pages 2000
+col NAME for a30
+col NETWORK_NAME for a35
+col FAILOVER_METHOD for a25
+col FAILOVER_TYPE for a30
+select name,network_name,creation_date,clb_goal,
+FAILOVER_METHOD,FAILOVER_RETRIES,FAILOVER_TYPE
+from dba_services;
+
+da
+===
+
+select * from table ( dbms_xplan.display_awr('&sql_id'))
+/
+
+dba_tab_partitions:
+====================
+
+1.
+set lines 188 pages 2000
+col TABLE_OWNER for a15
+col TABLE_NAME for a25
+col PARTITION_NAME for a30
+col HIGH_VALUE for a30
+break on TABLE_OWNER
+select TABLE_OWNER,TABLE_NAME,PARTITION_NAME,SUBPARTITION_COUNT,NUM_ROWS,HIGH_VALUE,TABLESPACE_NAME,LOGGING 
+from dba_tab_partitions 
+where TABLE_OWNER='&OWNER' 
+and table_name='&TABLE_NAME'
+order by PARTITION_NAME;
+
+2.
+set lines 188 pages 2000
+col TABLE_OWNER for a15
+col TABLE_NAME for a30
+col PARTITION_NAME for a20
+break on TABLE_OWNER
+select TABLE_OWNER,TABLE_NAME,PARTITION_NAME,SUBPARTITION_COUNT,NUM_ROWS,TABLESPACE_NAME,LOGGING 
+from dba_tab_partitions 
+where TABLE_OWNER='&OWNER' 
+and table_name='&TABLE_NAME'
+and PARTITION_NAME='&PARTITION_NAME'
+order by PARTITION_NAME;
+
+
+SPID:
+=====
+
+col schemaname for a20
+col osuser for a8
+col username for a8
+col machine for a20
+col program for a26
+set line 188 pages 2000
+select a.sid,a.serial#,a.status,a.schemaname,a.osuser,a.username,
+a.machine,a.program,to_char(logon_time,'DD-MM-YY HH24:MI')as "TIME" 
+from v$session a,v$process b 
+where a.paddr=b.addr 
+and b.spid=&spid;
+
+
+get spid from sid:
+*******************
+Set lines 200
+col sid format 99999
+col username format a15
+col osuser format a15
+select a.sid, a.serial#,a.username, a.osuser, b.spid
+from v$session a, v$process b
+where a.paddr= b.addr
+and a.sid='&sid'
+order by a.sid;
+
+SID:
+====
+
+set lines 188 pages 2000
+col MACHINE for a30
+col OSUSER for a20
+select sid,serial#,status,machine,osuser,to_char(LOGON_TIME, 'DD-MON-YYYY hh24:mi:ss') as LOGON_TIME 
+from v$session where sid='&sid' 
+order by logon_time;
+
+dba_ind_columns:
+================
+
+1.
+col INDEX_OWNER for a20
+col INDEX_NAME for a30
+col TABLE_OWNER for a20
+col TABLE_NAME for a30
+col COLUMN_NAME for a30
+break on INDEX_NAME skip page on column_name skip 1
+set lines 188 pages 2000
+select INDEX_OWNER,INDEX_NAME,TABLE_OWNER,TABLE_NAME,COLUMN_NAME,COLUMN_POSITION 
+from dba_ind_columns 
+where TABLE_NAME='&TABLE_NAME';
+
+2.
+col INDEX_OWNER for a20
+col INDEX_NAME for a30
+col TABLE_OWNER for a20
+col TABLE_NAME for a30
+col COLUMN_NAME for a30
+break on INDEX_NAME skip page on column_name skip 1
+set lines 188 pages 2000
+select INDEX_OWNER,INDEX_NAME,TABLE_OWNER,TABLE_NAME,COLUMN_NAME,COLUMN_POSITION 
+from dba_ind_columns 
+where INDEX_OWNER='&OWNER' 
+and TABLE_NAME='&TABLE_NAME';
+
+
+Blockers and Waiters:
+====================
+
+col sess for a25
+SELECT a.inst_id,DECODE(a.request,0,'Holder: ','  Waiter: ')||a.sid sess,
+nvl(b.sql_id,prev_sql_id) sqlid,a.id1,row_wait_obj#,
+DBMS_ROWID.rowid_create( 1 ,row_wait_obj#,
+row_wait_file# ,
+row_wait_block# , 
+row_wait_row#) row_id,
+BLocKING_SESsion BLK_SESS,
+FINAL_BLOCKING_SESSION FINAL_BLK_SESS, 
+a.lmode, 
+a.request, 
+a.type,
+b.status,
+last_call_et    
+FROM gV$LOCK a,gv$session b  
+WHERE (a.id1, a.id2, a.type) IN (SELECT id1, id2, type FROM gV$LOCK WHERE request>0)  
+and a.sid=b.sid
+and row_wait_obj#>0 
+ORDER BY a.id1,a.request
+/
+
+longops.sql
+===========
+
+col SOFAR format 999999999999
+col TOTALWORK format 999999999999
+select s.sid,s.username,SOFAR,TOTALWORK,round(SOFAR*100/TOTALWORK) "Percent Complete", round(TIME_REMAINING/60) TIME_REMAINING_MINS ,round(last_call_et/60) MINS
+from v$session_longops l,v$session s
+where s.sid in
+(select sid from v$session where username is not null and status='ACTIVE')
+and  TIME_REMAINING <> 0
+and s.sid=l.sid
+order by 4 desc
+/
+
+select * from  v$session_longops  where sofar <> totalwork
+/
+
+gvparameter.sql
+================
+
+col NAME for a30
+set lines 188 pages 2000
+col VALUE for a40
+col DISPLAY_VALUE for a40
+col ISSYS_MODIFIABLE for a30
+select INST_ID,NAME,VALUE,DISPLAY_VALUE,ISSYS_MODIFIABLE
+from gv$parameter
+where NAME='&PARAMETER_NAME'
+order by INST_ID;
+
+rpoint.sql
+==========
+
+set lines 188 pages 2000
+col TIME for a40
+select NAME,TIME,STORAGE_SIZE/1024/1024 "STORAGE_SIZE_MB",GUARANTEE_FLASHBACK_DATABASE 
+from v$restore_point;
+
+dba_registry
+============
+
+set lines 188 pages 2000
+col action_time for a30
+col action for a18
+col namespace for a10
+col version for a30
+col BUNDLE_SERIES for a15
+col comments for a50
+select * from dba_registry_history;
+
+
+select * from registry$sqlpatch;
+
+select * from registry$history;
+
+col VERSION for a8
+col ACTION for a10
+col ACTION_TIME for a30
+col DESCRIPTION for a70
+col BUNDLE_SERIES for a13
+set lines 188 pages 2000
+select PATCH_ID,VERSION,ACTION,ACTION_TIME,DESCRIPTION,BUNDLE_SERIES,BUNDLE_ID,STATUS 
+from dba_registry_sqlpatch;
+
+19c:
+
+set lines 188 pages 2000
+col DESCRIPTION for a55
+col STATUS for a8
+col ACTION_TIME for a30
+select INSTALL_ID,PATCH_ID,PATCH_UID,PATCH_TYPE,ACTION,
+STATUS,ACTION_TIME,DESCRIPTION,SOURCE_VERSION,TARGET_VERSION 
+from dba_registry_sqlpatch;
+
+col COMP_NAME for a45
+col VERSION for a20
+select comp_id,comp_name,status,version 
+from dba_registry;
+
+DDL:
+****
+
+set long 99999999
+select TO_CHAR(dbms_metadata.get_ddl('&OBJECT_TYPE','&OBJECT_NAME','&OWNER')) from dual;
+
+set long 500000 pages 0 lines 180
+select dbms_metadata.get_ddl ('TABLESPACE',tablespace_name) DDL from dba_tablespaces where TABLESPACE_NAME='&TABLESPACE';
+
+
+INVALID OBJECTS:
+*****************
+
+col owner for a25
+col OBJECT_NAME for a30 
+select owner,object_name,object_type 
+from dba_objects where status='INVALID';
+
+Table_Size:
+************
+
+1.
+set lines 188 pages 2000
+col OWNER for a30
+col SEGMENT_NAME for a30
+select OWNER,SEGMENT_NAME,SEGMENT_TYPE,TABLESPACE_NAME,sum(BYTES)/1024/1024/1024 "SIZE_GB"
+from dba_segments
+where SEGMENT_NAME='&TABLE_NAME'
+group by OWNER,SEGMENT_NAME,SEGMENT_TYPE,TABLESPACE_NAME;
+
+2.
+set lines 188 pages 2000
+col OWNER for a30
+col SEGMENT_NAME for a30
+select OWNER,SEGMENT_NAME,SEGMENT_TYPE,TABLESPACE_NAME,sum(BYTES)/1024/1024/1024 "SIZE_GB"
+from dba_segments
+where SEGMENT_NAME='&TABLE_NAME'
+and OWNER='&OWNER'
+group by OWNER,SEGMENT_NAME,SEGMENT_TYPE,TABLESPACE_NAME;
+
+Index_Size:
+***********
+
+set lines 188 pages 2000
+col SEGMENT_NAME for a30
+select OWNER,SEGMENT_NAME,SEGMENT_TYPE,TABLESPACE_NAME,sum(BYTES)/1024/1024/1024 "SIZE_OF_INDEX" 
+from dba_segments 
+where SEGMENT_NAME='&INDEX_NAME' 
+group by OWNER,SEGMENT_NAME,SEGMENT_TYPE,TABLESPACE_NAME;
+
+Temporary Tablespace Usage:
+***************************
+
+1.
+set lines 188 pages 2000
+col USERNAME for a10
+col OSUSER for a10
+col TABLESPACE for a12
+col SQL_TEXT for a120
+SELECT a.username, a.sid, a.serial#, a.osuser, b.tablespace, b.blocks, c.sql_text
+FROM v$session a, v$tempseg_usage b, v$sqlarea c
+WHERE a.saddr = b.session_addr
+AND c.address= a.sql_address
+AND c.hash_value = a.sql_hash_value
+ORDER BY b.tablespace, b.blocks;
+
+2.
+set lines 188 pages 2000
+SELECT A.tablespace_name tablespace, D.gb_total,
+SUM (A.used_blocks * D.block_size) / 1024 / 1024 /1024 gb_used,
+D.gb_total - SUM (A.used_blocks * D.block_size) / 1024 / 1024 / 1024 gb_free
+FROM v$sort_segment A,
+(SELECT B.name, C.block_size, SUM (C.bytes) / 1024 / 1024 /1024 gb_total
+FROM v$tablespace B, v$tempfile C
+WHERE B.ts#= C.ts#
+GROUP BY B.name, C.block_size
+) D
+WHERE A.tablespace_name = D.name
+GROUP by A.tablespace_name, D.gb_total
+/
+
+
+Failed Login Attempts:
+***********************
+
+1.
+set lines 300 pages 2000
+col OS_USERNAME for a30
+col EXTENDED_TIMESTAMP for a35
+col USERNAME for a25
+col TERMINAL for a15
+col COMMENT_TEXT for a120
+col USERHOST for a30
+select COUNT(*),da.EXTENDED_TIMESTAMP,TRUNC(DA.TIMESTAMP) AUDIT_DATE,DA.RETURNCODE,DA.OS_USERNAME,DA.USERNAME,DA.userhost,DA.terminal,DA.COMMENT_TEXT
+from dba_Audit_trail DA 
+where TRUNC(TIMESTAMP)>=TRUNC(SYSDATE-1/(24*60))
+AND ACTION_NAME='LOGON' 
+and returncode <> 0 
+GROUP BY TRUNC(DA.TIMESTAMP),DA.OS_USERNAME,DA.USERNAME,DA.userhost,DA.terminal,da.EXTENDED_TIMESTAMP,DA.COMMENT_TEXT,DA.RETURNCODE 
+order by EXTENDED_TIMESTAMP
+/
+
+2.
+SELECT
+  TO_CHAR(TIMESTAMP,'YYYY/MM/DD HH24:MI') TIMESTAMP,
+  SUBSTR(OS_USERNAME,1,20) OS_USERNAME,
+  SUBSTR(USERNAME,1,20) USERNAME,
+  SUBSTR(TERMINAL,1,20) TERMINAL,
+  ACTION_NAME,
+  RETURNCODE
+FROM
+SYS.DBA_AUDIT_SESSION
+WHERE TIMESTAMP BETWEEN SYSDATE-1 AND SYSDATE
+and RETURNCODE>0
+ORDER BY TIMESTAMP;
+
+
+Falied Login Attempts Count:
+****************************
+1.
+
+set lines 300 pages 2000
+col USERNAME for a25
+col OS_USERNAME for a20
+col USERHOST for a35
+col CLIENT_ID for a20
+select username,os_username,userhost,client_id,trunc(timestamp),count(*) failed_logins
+from dba_audit_trail
+where returncode in ('1017','28000') and --1017 is invalid username/password
+timestamp > sysdate - 1
+group by username,os_username,userhost, client_id,trunc(timestamp); 
+
+2.
+
+SELECT  SUBSTR(OS_USERNAME,1,20) OS_USERNAME,
+SUBSTR(USERNAME,1,20) USERNAME,
+SUBSTR(TERMINAL,1,20) TERMINAL,
+ACTION_NAME,
+RETURNCODE,count(*)
+FROM
+SYS.DBA_AUDIT_SESSION
+WHERE TIMESTAMP BETWEEN SYSDATE-1 AND SYSDATE
+and RETURNCODE>0
+group by SUBSTR(OS_USERNAME,1,20),
+SUBSTR(USERNAME,1,20),
+SUBSTR(TERMINAL,1,20),
+ACTION_NAME,RETURNCODE
+order by count(*);
+
+v$session:
+**********
+
+1. 
+
+col USERNAME for a30
+col "Script" for a50
+set lines 188 pages 2000
+select USERNAME,SID,SERIAL#,to_char(LOGON_TIME,'DD/MM/YYYY HH24:MI') LOGON_TIME,STATUS,/*+RULE*/ 'alter system kill session '''||sid||','||serial# ||''' immediate;' "Script" 
+from v$session 
+where USERNAME='&USERNAME';
+
+2.
+select count(*),username,status,program,machine from gv$session where username is not null group by username,status,program,machine order by 1;
+
+Session per user count:
+
+set lines 188 pages 2000
+col STATUS for a10
+col MACHINE for a18
+col LOGON_TIME for a20
+select count(1),USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,to_char(LOGON_TIME,'DD/MM/YYYY HH24:MI') LOGON_TIME
+from v$session where username='&USERNAME' 
+group by USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,LOGON_TIME;
+
+set lines 188 pages 2000
+col username for a20
+col STATUS for a10
+col MACHINE for a25
+col LOGON_TIME for a20
+select count(1),USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,to_char(LOGON_TIME,'DD/MM/YYYY HH24:MI') LOGON_TIME
+from v$session where username is not null
+group by USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,LOGON_TIME;
+
+set lines 188 pages 2000
+col username for a20
+col STATUS for a10
+col MACHINE for a18
+col LOGON_TIME for a20
+select count(1),USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,to_char(LOGON_TIME,'DD/MM/YYYY HH24:MI') LOGON_TIME
+from v$session where username is not null and STATUS='ACTIVE'
+group by USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,LOGON_TIME;
+
+set lines 188 pages 2000
+col username for a20
+col STATUS for a10
+col MACHINE for a18
+col LOGON_TIME for a20
+select count(1),USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,to_char(LOGON_TIME,'DD/MM/YYYY HH24:MI') LOGON_TIME
+from v$session where username is not null and STATUS='INACTIVE'
+group by USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,LOGON_TIME;
+
+
+set lines 188 pages 2000
+col STATUS for a10
+col MACHINE for a18
+col LOGON_TIME for a20
+select inst_id,count(1),USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,to_char(LOGON_TIME,'DD/MM/YYYY HH24:MI') LOGON_TIME
+from gv$session where username='&USERNAME' 
+group by INST_ID, USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,LOGON_TIME;
+
+
+set lines 188 pages 2000
+col STATUS for a10
+col MACHINE for a25
+col LOGON_TIME for a20
+col MODULE for a18
+select count(1),INST_ID,USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,to_char(LOGON_TIME,'DD/MM/YYYY HH24:MI') LOGON_TIME
+from gv$session where username='&USERNAME' 
+group by INST_ID,USERNAME,MACHINE,SQL_ID,MODULE,STATUS,SID,SERIAL#,LOGON_TIME;

@@ -1,0 +1,20 @@
+$ select tablespace_name,max_bytes from dba_ts_quotas where username='Scott'  -- size for the user, -1-unlimited
+$ alter user scott quota 5m on example   -- grant 5mb
+$ grant unlimited tablespace to scott;  -- grant unlimited tablespace
+$ select privilege from dba_sys_privs where grantee='SCOTT'
+
+----
+>show parameter undo   -- will see undo tablespace size
+> select property_name,property_value from database_properties  --we couldn't see temp tbs in show parameter command,
+>create user newuser identified by password;  -- create new user
+> select default_tabelspace,temporary_tablespace from dba_users where username='newuser';
+>select name from v$tempfile;  -- see temp datafile path
+>create temprorary tablespace newtemp tempfile '<path/newtemp.dbf>', size 100M;  -- create new temp tablespace
+> !ls -l /wysheid/prim/newtemp1dbf   -- see size and create date for the file
+> create user user1 identified by pass default tablespace usera temporary tablespace newtemp;  --create user withtblspace 
+> alter user user1 temporary tablespace temp;  -- change the tablespace
+> create undo tablespace newundo datafile '<path/newundo.dbf>' size 100M;  --create undu tablespace
+>create bigfile tablespace bigtbs datafile '<path/bigtbs.dbf>' size 100M  -- create bigfile
+
+
+

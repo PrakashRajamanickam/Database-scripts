@@ -1,0 +1,16 @@
+configure GUI methond
+
+netca  --configure gui method
+
+listener path
+-------------
+cd $ORACLE_HOME/network/admin/
+
+Listener configration
+---------------------
+# netca  -- the wizard will come
+# select -> listener configuration ->add ->ListenerName(Listener) ->
+->TCP(protocol) ->use the standard port 1521 ->Would you like to configure another listener(No)-> finish
+ 
+# ps -ef|grep tns    -- check the listner status
+#lsnrctl status LISTENER

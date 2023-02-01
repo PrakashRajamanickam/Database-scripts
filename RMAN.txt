@@ -1,0 +1,11 @@
+> show parameter recover  -- login db check flash recovery area path and size
+>RMAN
+RMAN> connect target /
+RMAN>backup database;   -- full backup
+RMAN> host "clear";   -- clear screen
+RMAN> backup database plus archivelog;  --backup with archive log
+                                        --first taking all the archive log,then db
+
+
+
+

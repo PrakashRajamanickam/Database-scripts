@@ -1,0 +1,58 @@
+db startup and shutdown:
+------------------------
+$ ls -al /etc/oratab
+$ vi /etc/oratab
+$ which oraenv   -- see the oraenv path$ . oraenv
+# <dbname>
+# echo $ORACLE_SID    -- see the which db
+# echo $ORACLE_HOME   -- home path
+$ sqlplus "sys as sysdba"
+$ <enter the pwd>
+$ whcih oracle   -- oracle path
+$ id oracle   --see the sysdba group
+
+startup 
+-------
+3stage
+1)startup Nomount --> start instance -- 1)allocate memory in parameter file,2) back ground process
+# Nomount stage -- instance start is no mount stage,
+--its locate the control file,
+2)startup mount stage  --controlfile parameter in parameter file and lock on the contol file
+-- database reading the contolfile abount datafile location
+3) open the database either read only mode or read/write mode
+
+$startup nomount   -- the database started
+$cd $ORACLE_HOME/dbs
+$ ls -alrt
+$ could see the 2type of parameter file
+1) initprim.ora   -- text based parameter file
+2)spfileprim.ora  -- binary based parameter file
+
+$vi initprim.ora   -- if we change the file memory or other will reflect after restart
+$ show parameter spfile  -- will see the file path and this file allocated memory reflect for db
+$ show parameter sga   -- see the allocated memory
+$select status from v$instance;  -- see the status started or stopped
+$ show parameter control   -- control file location
+$ alter database mount;   --mount the database
+$  select open_mode from v$database;  -- see the mount mode
+$ alter database open;   -- start the db open and see the db read/write mode
+
+Shutdown  --  sqlplus system/oracle  -- connect the db oracle user
+--------
+$ Shutdown/shutdown normal  --wait for already connected user and checkpoint will occur
+$ shutdown immediate  -- its terminate all the user and shutdown, Check point will occur
+$ shutdown transactional --allow the user to complete the current transaction, check point will occur, not allow new transaction same user
+$ shutdown abort; -- no check point,power failure
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,55 @@
+oracle@no2-stdb-51:~$ id
+uid=3738(oracle) gid=152(oinstall) groups=152(oinstall),101(dba),267(asmdba),507(oper),509(nimbus)
+
+oracle@vm-pgrico-8:/u01/app/dump/190$ pwd
+/u01/app/dump/190
+
+
+
+oracle@no1-pdb-550:~$ id
+uid=3738(oracle) gid=152(oinstall) groups=152(oinstall),101(dba),267(asmdba),507(oper),509(nimbus)
+oracle@no1-pdb-550:~$
+oracleasm configure
+ls -l /dev/oracleasm/disks/*
+meminfo
+df -h /u01
+cat /etc/hosts
+hostname
+ping hostname
+ifconfig
+python -m pip uninstall urllib3python -m pip install --upgrade urllib3
+
+
+mkdir /home/oracle/deploy/log
+mkdir /home/oracle/deploy/python
+
+Edit json file
+python deployDB.py
+./auto_psu.sh -d debug -f force -l last
+--------------------
+alter system set db_files=3000 scope=spfile;
+alter pluggable database all save state;
+
+
+
+alter profile default limit PASSWORD_LIFE_TIME unlimited PASSWORD_GRACE_TIME unlimited;
+
+
+
+alter user dbsnmp identified by "xxxx" account unlock;
+alter user asmsnmp identified by "xxxxx" account unlock;
+
+
+
+
+alter database flashback off;
+shut immediate;
+
+
+
+startup mount;
+alter database noarchivelog;
+alter database open;
+
+SQL> set serverout on
+SQL> exec bck_check;

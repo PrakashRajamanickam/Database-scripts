@@ -1,0 +1,3 @@
+create pfile='/tmp/initxxxxx.ora' from memory;
+ALTER SYSTEM SET sga_max_size=xxxG SCOPE=SPFILE;
+ALTER SYSTEM SET sga_target=xxxG SCOPE=SPFILE;

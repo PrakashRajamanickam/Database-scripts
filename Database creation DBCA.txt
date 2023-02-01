@@ -1,0 +1,18 @@
+# cd /oracle/app/product/11.2.0/dbhome_1
+# cd bin  --will find the executable dbca->database configuration assistance
+# pwd   --find the path
+# ./dbca   -- the wizard will come
+# create a database ->Custom database option-> Global database Name(testdb)-> sid(testdb) ->
+enterprise manager(disable)-> default administrative passwords(sys and system same administrator password)
+->Filesystem->(/oracle,if ASM select that)-> enable Flash recovery area(100MB) ->enable archiving ->database components(disable) ->
+Memory size SGA and PGA(60MB) ->sizing(proceses-150) ->character set(default) ->connection Mode(default)
+->storage ( 2 controlfile) ->one file db location,another file flash_recovery_area
+-> tablespace(SYSAUX,SYSTEM,TEMP,UNDOTBS1,USERS)
+->Datafiles for SYSAUX,SYSTEM,TEMP,UNDOTBS1,USERS
+->Redo Log Groups -3files created
+->create database(click script also) - Finish
+# cat /etc/oratab    --to see the db 
+# . oraenv
+# testdb    -- dbname
+# sqlplus "/ as sysdba"   -- connect sysdba
+sql>select name from v$databases  -- see the db

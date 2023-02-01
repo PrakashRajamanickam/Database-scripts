@@ -1,0 +1,31 @@
+set lines 188 pages 2000
+set time on timing on
+column owner format a8
+column name format a30
+col controlfile_type for a20
+set sqlprompt "_user'@'_connect_identifier' SQL> '"
+alter session set nls_date_format='dd-mm-yyyy hh24:mi:ss';
+col HOST_NAME for a15
+col CONTROLFILE_TYPE for a18
+col DB_UNIQUE_NAME for a15
+col OPEN_MODE for a15
+col STARTUP_TIME for a23
+col STANDBY_DB_UNIQUE_NAME for a22
+col VERSION for a10
+col force_logging for a15
+select v.INSTANCE_NAME,v.HOST_NAME,d.DB_UNIQUE_NAME,d.PRIMARY_DB_UNIQUE_NAME "STANDBY_DB_UNIQUE_NAME",d.OPEN_MODE,
+d.DATABASE_ROLE,d.CONTROLFILE_TYPE,v.VERSION,TO_CHAR(v.startup_time, 'DD-MON-YYYY HH24:MI:SS') startup_time,v.LOGINS,d.force_logging
+from v$instance v, v$database d
+where upper(v.INSTANCE_NAME)=d.NAME;
+
+set lines 188 pages 2000
+col OPEN_TIME for a40
+alter session set nls_date_format='dd-mm-yyyy hh24:mi:ss';
+select vc.CON_ID,vc.NAME,vc.OPEN_MODE,vc.RESTRICTED,vp.OPEN_TIME
+from v$containers vc, v$pdbs vp
+where vc.CON_ID = vp.CON_ID
+and vc.NAME = vp.NAME
+order by 1;
+
+alter session set container = &PLUGGABLE_DB_NAME;
+set sqlprompt "_USER'@'_CONNECT_IDENTIFIER::&CONT SQL> "

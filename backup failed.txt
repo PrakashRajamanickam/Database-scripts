@@ -1,0 +1,10 @@
+rman target /
+Delete force archivelog all;
+Change archivelog all crosscheck;
+
+Run fullbackup again and verify : 
+
+begin
+dbms_scheduler.run_job('RMAN_BACKUP_FULL_STDBY');
+end;
+/

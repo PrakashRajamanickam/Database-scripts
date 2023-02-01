@@ -1,0 +1,27 @@
+Database creation slinet mode
+# xclock
+#cd /data/database
+#ls -lrt
+#cd response/
+#cd $ORACLE_HOME
+#ls -ltr
+# cd assistants/
+# ls -lrt
+# cd dbca/
+# ls -l
+# cp dbca.rsp dbca.rspbak  -- taking backup
+# vi dbca.rsp
+ dbca -progress_only -responseFile  --we need to go fist option
+ GDBNAME="test"  --global dbname
+ SID ="test" 
+ SYSPASSWORD = "password"    --uncheck all the password and enter new password requird
+ SYSTEMPASSWORD = "password" --
+ SYSMANPASSWORD = "password"
+DBSNMPPASSWORD ="password"
+:wq
+# head 100 dbca.rsp  -- see 100 lines
+# head +100 dbca.rsp  -- see another 100 lines
+# view dbca.rsp  -- copy the fist step 
+# dbca -progress_only -responseFile dbca.rsp  -- copy from the file and run it wizard will create the db
+
+# 

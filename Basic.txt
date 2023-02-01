@@ -1,0 +1,108 @@
+Database -> collection -> Documents
+Collection -> Table
+Documents -> Row
+Field -> column
+
+use mydb
+
+show dbs
+db.mycollection.insert({"name":"Max"})
+db.dropDatabase()
+select * from mycollection
+db.createCollection("mycollection")
+show collections
+db.mycollection2.insert({"name":"MAX"})
+db.mycollection2.drop()
+
+-----------------
+db.students.insert(
+[
+{
+"Sno":"100",
+"FirstName":"Prakash",
+"LastName":"Raja",
+"Place":"Chennai"
+}
+,
+{
+"Sno":"101",
+"FirstName":"Kumar",
+"lastname":"Kannan",
+"Place":"Bangalore"
+},
+db.students.insert(
+[
+{
+"Sno":"102",
+"FirstName":"Vetri",
+"LastName":"vlvd",
+"Place":"Culkatta"
+}
+,
+{
+"Sno":"104",
+"FirstName":"Denny",
+"lastname":"Daniel",
+"Place":"Delhi"
+}
+]
+)
+---
+use school
+db.students.find().pretty() -- select the 
+
+db.students.findOne()  -- select first record
+----
+db.students.find(
+{
+    "Sno" : "101"
+}
+)
+----- find select greater than
+db.students.find(
+{
+    "Sno" : {$gt : "103"}
+}
+)
+---greater than eaqual
+db.students.find(
+{
+    "Sno" : {$gte : "102"}
+}
+)
+)
+---less than
+db.students.find(
+{
+    "Sno" : {$lt : "102"}
+}
+)
+------Less than equal to
+db.students.find(
+{
+    "Sno" : {$lte : "102"}
+}
+)
+
+---where condition
+
+db.mycollection.find(
+{
+  "name":"Max"  
+    
+}
+)
+
+--not equal to
+
+db.mycollection.find(
+{
+  "name":{$ne : "Max"  }
+    
+}
+).pretty()
+
+--And condition
+db.students.find(
+{"FirstName" : "Prakash","Place":"Chennai"}
+)

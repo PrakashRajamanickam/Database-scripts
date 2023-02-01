@@ -1,0 +1,26 @@
+SQL> SELECT SID, SERIAL#, STATUS,USERNAME,SERVER,COMMAND FROM V$SESSION WHERE USERNAME='PC_INSERT';
+SELECT SID, SERIAL#, STATUS,USERNAME,SERVER,COMMAND FROM V$SESSION where SID in(1166,1444);
+ALTER SYSTEM KILL SESSION '1444,22276' IMMEDIATE;
+Set lines 200
+col sid format 99999
+col username format a15
+col osuser format a15
+select a.sid, a.serial#,a.username, a.osuser, b.spid
+from v$session a, v$process b
+where a.paddr= b.addr
+and a.sid='&sid'
+order by a.sid;
+
+----or-----
+set lines 188 pages 2000
+col MACHINE for a30
+col OSUSER for a20
+select sid,serial#,status,machine,osuser,to_char(LOGON_TIME, 'DD-MON-YYYY hh24:mi:ss') as LOGON_TIME
+from v$session where sid='&sid'
+order by logon_time;
+
+  SID    SERIAL# USERNAME        OSUSER          SPID
+------ ---------- --------------- --------------- ------------------------
+  2022          0 PC_INSERT       infa            49183
+
+SQL> ! kill -9 49183

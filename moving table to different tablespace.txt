@@ -1,0 +1,14 @@
+> create table prakash(id number, name varchar2(200)) tablespace users;
+>create index ix_prakash onprakash(id) tablespace users;
+>select table_name,tablespace_name from dba_tables where table_name='prakash';
+>create tablespace newtbs datafile '/prakash/new.dbf' size 1G;
+> insert into prakash values(1,'test');
+> commit
+>select rowid,id from prakash;  --see the rowid
+>alter table prakash move tablespace newtbs;
+>select table_name,tablespace_name from dba_tables where table_name='prakash';  -- check modified tablespace
+>select index_name,status from dba_indexes where table_name='prakash'  --index is unusable, rebuild index or rebuild tablespace to valid
+>alter index ix_prakash rebuild;
+or
+> alter index ix_prakash rebuild tablespace newtbs;
+> select index_name,status from dba_indexes where table_name='prakash' 

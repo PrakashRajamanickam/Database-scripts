@@ -1,0 +1,50 @@
+
+Run pluggable secondary database
+================================
+alter pluggable database P1NAAS open read only;
+
+
+Steps:
+1)Patch files available on pigrico server and need to move to the server on new folder - /u01/patch/July.
+unzip the file p32917447_121020_Linux-x86-64.zip
+
+oracle@vm-pdbr12-6:/u01/patch/July$ ll
+total 5.4G
+drwxr-xr-x 3 oracle oinstall  160 Dec  2 13:05 .
+drwxrwxrwx 7 grid   oinstall  324 Dec  2 11:46 ..
+drwxrwxrwx 7 oracle oinstall  143 Jul 19 15:40 32917447
+-rw-r--r-- 1 oracle oinstall 227K Dec  2 11:46 p21866762_12102210720ProactiveBP_Linux-x86-64.zip
+-rwxr-xr-x 1 oracle oinstall 5.3G Dec  2 11:46 p32917447_121020_Linux-x86-64.zip
+-rw-r--r-- 1 oracle oinstall 117M Dec  2 11:46 p6880880_122010_Linux-x86-64.zip
+oracle@vm-pdbr12-6:/u01/patch/July$
+
+2)grant permission to the folder chmod 777 32917447
+
+3)Rename the OPatch to OPatch_old and unzip the file from oracle@vm-pdbr12-6:/u01/patch/July/p6880880_122010_Linux-x86-64.zip.
+The new opatch file will create.
+oracle@vm-pdbr12-6:/u01/app/oracle/product/12.1.0/dbhome_1$ ls -ld OP*
+drwxr-x--- 15 oracle oinstall 4096 Oct 26 01:01 OPatch
+drwxr-xr-x 14 oracle oinstall 4096 Oct 21  2020 OPatch_old
+
+3)Login to grid and go to the patch path.Delete the rm -rf OPatch folder. 
+Move to the OPatch folder from oracle@vm-pdb-100:/u01/app/oracle/product/12.1.0/dbhome_1/OPatch$ to grid@vm-pdbr12-6:/u01/app/12.1.0/grid/OPatch$
+grid@vm-pdbr12-6:~$ ps -ef |grep tns
+root        29     2  0 12:04 ?        00:00:00 [netns]
+grid     16608 16490  0 14:28 pts/7    00:00:00 grep --color=auto tns
+grid     40488     1  0 13:30 ?        00:00:00 /u01/app/12.1.0/grid/bin/tnslsnr LISTENER -no_crs_notify -inherit
+grid     40521     1  0 13:30 ?        00:00:00 /u01/app/12.1.0/grid/bin/tnslsnr LISTENER_SCAN1 -no_crs_notify -inherit
+grid@vm-pdbr12-6:~$
+
+grid@vm-pdbr12-6:/u01/app/12.1.0/grid/OPatch$
+
+4)Login to the root user and set oraenv. Execute the patch analysis on grid and oracle home. Then patch the server
+
+oracle@vm-pdb-100:/u01/app/oracle/product/12.1.0/dbhome_1/OPatch$ ./opatch lsinv | grep ^P
+
+/u01/app/12.1.0/grid/OPatch/opatchauto apply /u01/patch/July/32917447 -oh /u01/app/12.1.0/grid -analyze
+
+/u01/app/oracle/product/12.1.0/dbhome_1/OPatch/opatchauto apply /u01/patch/July/32917447 -oh /u01/app/oracle/product/12.1.0/dbhome_1 -analyze
+
+/u01/app/oracle/product/12.1.0/dbhome_1/OPatch/opatch rollback -id 21866762
+/u01/app/oracle/product/12.1.0/dbhome_1/OPatch/opatch rollback -id 28722229
+

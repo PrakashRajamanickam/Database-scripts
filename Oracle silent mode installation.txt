@@ -1,0 +1,52 @@
+# both cases need to call runinstaller
+# using the response file will do (rsp)
+# give - silent option, other one without silent option using our rsp file
+# will create Oracle has giving the templete for response file using this 
+
+#su - oracle  -- switch user
+#ls -ltr
+# cd database  -- going to the installation software 
+# ls -ltr
+# cd response
+#ls -lrt
+#cp db_install.rsp $HOME  -- copy the response file to home directory
+# cd  -- coming back to home directory
+# vi db_install.rsp  -- edit the file   -- escape ->:1 ->will go first line,:wq -save
+# modify ->oracle.install.option=INSTALL-db-SWONLYS
+ORACLE_HOSTNAME=<hostname>  -- check "hostname" command in the server
+UNIX_GROUP_NAME=oinstall
+INVENTORY_LOCATION=/data/oraInventory   --check the server->cat /etc/oraInst.loc, If don't have give any location
+ SELECTED_LANGUAGE=en   -- english
+ORACLE_HOME=/data/dbhome_1
+ORACLE_BASE=/data/11.2.0     --login the db -> echo $ORACLE_BASE
+oracle.install.db.InstallEdition=EE    --enterprise edition
+oracle.install.db.DBA.GROUP=dba
+oracle.install.db.OPER_GROUP=dba
+SECURITY_UPDATES_VIA_MYORACLESUPPORT=false
+DECLAIN_SECURITY_UPDATES=true
+# mkdir /data/dbhome_1    --create directory root user and grant permission
+#chown -R oracle:oinstall /data/dbhome_1  
+#chmod -R 775 .data.dbhome_2
+#cd /data/database
+#ls -lrt
+# ./runInstaller -help   - understand what are the values need to give
+#ctrl+C
+#clear
+# ./runInstaller -silent -noconfig -responseFile /home/oracle/db_install.rsp  --silent mode installation
+# xclock   -- if its  failing installation and xclock -> run "xhost +" in root user
+# ./runInstaller -silent -noconfig -responseFile /home/oracle/db_install.rsp  --again run silent mode installation
+---
+## another window root user check the logs
+# cd /data/oraInventory/logs
+# ls -lrt
+# installActions2012-09-19.log  -- last file
+# tail -f installActions2012-09-19.log  -- check the current log
+--
+#Finally run the root.sh
+
+
+
+
+
+
+

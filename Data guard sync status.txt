@@ -1,0 +1,25 @@
+Check Status of generated, Received & Applied Archive log in Oracle Dataguard
+Check the Generated archive log in Primary Database
+
+--Run on Primary Server:
+select thread#, max(sequence#) "Last Primary Seq Generated"
+from v$archived_log val, v$database vdb
+where val.resetlogs_change# = vdb.resetlogs_change#
+group by thread# order by 1;
+
+Check the Received status of archive log at Standby Server
+
+--Run on Standby Server:
+select thread#, max(sequence#) "Last Standby Seq Received"
+from v$archived_log val, v$database vdb
+where val.resetlogs_change# = vdb.resetlogs_change#
+group by thread# order by 1;
+
+Check the applied status of archive log on Standby server
+
+--Run on Standby Server:
+select thread#, max(sequence#) "Last Standby Seq Applied"
+from v$archived_log val, v$database vdb
+where val.resetlogs_change# = vdb.resetlogs_change#
+and val.applied in ('YES','IN-MEMORY')
+group by thread# order by 1;

@@ -1,0 +1,102 @@
+Create directory
+----------------
+mkdir -p /data/db1
+mkdir -p /data/db2
+mkdir -p /data/db3
+
+cd /data
+
+Install tree
+-------------
+yum install tree
+tree
+cd ..
+tree
+tree /data/
+
+change owner of the path
+------------------------
+chown -R mongod. /data/
+
+Stop the service
+-----------------
+[root@ip-172-31-36-176 /]# service mongod status
+mongod (pid 2608) is running...
+[root@ip-172-31-36-176 /]# service mongod stop
+Stopping mongod:   
+                                        [  OK  ]
+Copy the config file
+---------------------
+[root@ip-172-31-36-176 /]# cp -r /etc/mongod.conf /data/db1/
+[root@ip-172-31-36-176 /]# cp -r /etc/mongod.conf /data/db2
+[root@ip-172-31-36-176 /]# cp -r /etc/mongod.conf /data/db3
+
+Copy the mongod file -- copy mongod file
+-----------------------------------
+[root@ip-172-31-36-176 /]# cd /etc/init.d/   
+[root@ip-172-31-36-176 init.d]#
+[root@ip-172-31-36-176 init.d]# cp mongod mongodb1
+[root@ip-172-31-36-176 init.d]# cp mongod mongodb2
+[root@ip-172-31-36-176 init.d]# cp mongod mongodb3
+
+Modify the config file path-- change config path /etc/data/db1/mongod.config
+---------------------------------------
+[root@ip-172-31-36-176 init.d]# vi mongodb1  
+[root@ip-172-31-36-176 init.d]# vi mongodb2
+[root@ip-172-31-36-176 init.d]# vi mongodb3
+[root@ip-172-31-36-176 init.d]# cd
+[root@ip-172-31-36-176 ~]# pwd
+/root
+
+# Edit the config file -- change datapath,logpath,pidpath,portno and replication enabled
+----------------------
+[root@ip-172-31-36-176 ~]# vi /data/db1/mongod.conf  
+[root@ip-172-31-36-176 ~]#
+[root@ip-172-31-36-176 ~]# cd /data/db1/
+[root@ip-172-31-36-176 db1]# ll
+total 4
+-rw-r--r-- 1 mongod mongod 885 Jul 19 10:22 mongod.conf
+[root@ip-172-31-36-176 db1]# cd -r mongod.conf /data/db2/ -- copy the remaining server
+-bash: cd: -r: invalid option
+cd: usage: cd [-L|[-P [-e]]] [dir]
+[root@ip-172-31-36-176 db1]# cp -r mongod.conf /data/db2/
+cp: overwrite ‘/data/db2/mongod.conf’? yes
+[root@ip-172-31-36-176 db1]# cp -r mongod.conf /data/db3/
+cp: overwrite ‘/data/db3/mongod.conf’? yes
+
+#change owner of the file
+-------------------------
+[root@ip-172-31-36-176 db1]# chown -R mongod. mongod.conf   
+[root@ip-172-31-36-176 db1]# ll
+total 4
+-rw-r--r-- 1 mongod mongod 885 Jul 19 10:22 mongod.conf
+[root@ip-172-31-36-176 db1]# cd ..
+[root@ip-172-31-36-176 data]# ll
+total 16
+drwxr-xr-x 4 mongod mongod 4096 Jun 28 15:13 db
+drwxr-xr-x 2 mongod mongod 4096 Jul 19 10:22 db1
+drwxr-xr-x 2 mongod mongod 4096 Jul 19 09:51 db2
+drwxr-xr-x 2 mongod mongod 4096 Jul 19 09:51 db3
+
+Modify config file db2 and db3
+------------------------------
+[root@ip-172-31-36-176 data]# cd db2/
+[root@ip-172-31-36-176 db2]#
+[root@ip-172-31-36-176 db2]#
+[root@ip-172-31-36-176 db2]# ll
+total 4
+-rw-r--r-- 1 mongod mongod 885 Jul 19 10:24 mongod.conf
+[root@ip-172-31-36-176 db2]# vi mongod.conf
+[root@ip-172-31-36-176 db2]# cd ..
+[root@ip-172-31-36-176 data]# cd db3
+[root@ip-172-31-36-176 db3]# ll
+total 4
+-rw-r--r-- 1 mongod mongod 885 Jul 19 10:24 mongod.conf
+[root@ip-172-31-36-176 db3]# vi mongod.conf
+[root@ip-172-31-36-176 db3]# chown -R mongod. mongod.conf
+[root@ip-172-31-36-176 db3]# cd ..
+[root@ip-172-31-36-176 data]# cd db2
+[root@ip-172-31-36-176 db2]# chown -R mongod. mongod.conf
+[root@ip-172-31-36-176 db2]#
+[root@ip-172-31-36-176 db2]# cd
+[root@ip-172-31-36-176 ~]# service mongodb1 start

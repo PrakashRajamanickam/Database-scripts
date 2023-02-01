@@ -1,0 +1,20 @@
+
+> shutdown immediate    --login db and shutdown
+>startup mount restrict exclusive;   -- startup the db
+> select name from v$datafile   -- see the datafiles
+> drop database    -- drop the database, we also can drop dbca method
+> cd /etc/oratab   -- the entry will remain and need to delete manually
+
+Drop database DBCA
+------------------
+>ps -eaf|grep smon
+>. oraenv
+> <dbname>
+>sqlplus "/as sysdba"
+>select name,open_mode,database_role from v$database;  -- see the database
+>select name from v$datafile;  --all the datafiles
+> !ls -l /wysheid/app/oradata/target/   -- see all the files in the path
+>!cat /etc/oratab  -- see the database name in the oratab
+>exit
+>dbca  --wizard is select the db
+>select the delete database option and finish
